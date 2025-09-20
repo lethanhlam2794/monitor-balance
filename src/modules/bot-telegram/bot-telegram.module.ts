@@ -1,0 +1,39 @@
+// Import các thư viện cần thiết
+import { Module, forwardRef } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+
+// Import model, service và controller
+import { BotService } from './bot.service';
+import { BotController } from './bot.controller';
+import { UserModel, userSchema } from '../auth/auth.model';
+
+// Import modules
+import { AuthModule } from '../auth/auth.module';
+import { BalanceBscModule } from '../balance-bsc/balance-bsc.module';
+import { MasterFundVinachainModule } from '../masterfund-vinachain/masterfund-vinachain.module';
+import { CronModule } from '../cron/cron.module';
+
+/**
+ * Bot Telegram Module
+ * Quản lý Telegram Bot functionality
+ */
+@Module({
+  imports: [
+    // Import AuthModule để sử dụng AuthService
+    AuthModule,
+    // Import BalanceBscModule để sử dụng EtherscanService
+    BalanceBscModule,
+    // Import MasterFundVinachainModule để sử dụng MasterFundVinachainControllerService
+    MasterFundVinachainModule,
+    // Import CronModule để sử dụng MasterFundMonitoringService
+    forwardRef(() => CronModule),
+    // Đăng ký UserModel với Mongoose
+    MongooseModule.forFeature([
+      { name: UserModel.name, schema: userSchema }
+    ]),
+  ],
+  controllers: [BotController],
+  providers: [BotService],
+  exports: [BotService], // Export để có thể sử dụng ở nơi khác
+})
+export class BotTelegramModule {}

@@ -32,10 +32,13 @@ export class BuyCardControllerService {
           result.data.chainId
         );
 
+        const keyboard = MessageBuilder.buildCopyWalletKeyboard(result.data.walletAddress);
+
         this.logger.log('Success: true', buyCardMessage);
         return {
           success: true,
           message: buyCardMessage,
+          keyboard: keyboard,
         };
       } else {
         return {

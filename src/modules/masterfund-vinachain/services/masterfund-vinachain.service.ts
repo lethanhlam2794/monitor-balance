@@ -102,15 +102,15 @@ export class MasterFundVinachainService {
     if (userRole === 'ADMIN' || userRole === 'DEV') {
       // Admin và Dev: hiển thị tất cả wallets + partner wallet
       const walletList = wallets.map((wallet, index) => {
-        return `${index + 1}\\. ${escapeMarkdownV2(wallet.network)}: \`${wallet.address}\``;
+        return `${index + 1}\\. ${escapeMarkdownV2(wallet.network)}: 🔴 \`${escapeMarkdownV2(wallet.address)}\``;
       }).join('\n');
       resultText += `*${walletLabel}*\n${walletList}\n\n`;
       
       // Thêm partner wallet
-      resultText += `*${escapeMarkdownV2('Partner Deposit Wallet')}* \`0x1ef3355161464d2465e3591d536ea74ab88de1ef\`\n\n`;
+      resultText += `*${escapeMarkdownV2('Partner Deposit Wallet')}* 🔴 \`0x1ef3355161464d2465e3591d536ea74ab88de1ef\`\n\n`;
     } else {
       // User và Advanced User: chỉ hiển thị partner wallet
-      resultText += `*${partnerWalletLabel}* \`0x1ef3355161464d2465e3591d536ea74ab88de1ef\`\n\n`;
+      resultText += `*${partnerWalletLabel}* 🔴 \`0x1ef3355161464d2465e3591d536ea74ab88de1ef\`\n\n`;
     }
 
     resultText += `_${lastUpdate} ${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}_`;

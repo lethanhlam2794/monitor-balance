@@ -5,6 +5,7 @@
 
 import { getMessage, BotMessages, getRegularMessageResponse } from './enums/bot-messages.enum';
 import { COMMANDS_BY_ROLE, getCommandDescription } from './enums/bot-commands.enum';
+import TelegramBot from 'node-telegram-bot-api';
 
 /**
  * Escape ký tự đặc biệt cho MarkdownV2 (trừ backticks)
@@ -12,6 +13,7 @@ import { COMMANDS_BY_ROLE, getCommandDescription } from './enums/bot-commands.en
 export const escapeMarkdownV2 = (text: string): string => {
   return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
 };
+
 
 /**
  * Helper functions để tạo message động
@@ -124,15 +126,67 @@ ${getMessage(BotMessages.STATS_USER_COUNT)}${userCount}`;
     const lastUpdate = escapeMarkdownV2(getMessage(BotMessages.BUY_CARD_LAST_UPDATE));
     
     return `${header}${wallet}
-\`${walletAddress}\`
+🔴 \`${escapeMarkdownV2(walletAddress)}\`
 
-${token}${symbol}
-${balance}${balanceFormatted} ${symbol}
+${token}${escapeMarkdownV2(symbol)}
+${balance}${escapeMarkdownV2(balanceFormatted)} ${escapeMarkdownV2(symbol)}
 ${network}${chainId}\\)
 
-${lastUpdate}${new Date().toLocaleString('vi-VN')}`;
+${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
   },
 
+  /**
+   * Tạo inline keyboard cho copy wallet address
+   */
+  buildCopyWalletKeyboard: (walletAddress: string): TelegramBot.InlineKeyboardMarkup => {
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '📋 Copy Wallet Address',
+            copy_text: { text: walletAddress }
+          } as any
+        ]
+      ]
+    };
+  },
+
+  /**
+   * Tạo inline keyboard cho copy multiple wallet addresses
+   */
+  buildCopyMultipleWalletsKeyboard: (wallets: Array<{ network: string; address: string }>): TelegramBot.InlineKeyboardMarkup => {
+    const buttons = wallets.map((wallet, index) => ({
+      text: `📋 Copy ${wallet.network}`,
+      copy_text: { text: wallet.address }
+    } as any));
+
+    // Chia buttons thành các hàng, mỗi hàng tối đa 2 buttons
+    const rows: TelegramBot.InlineKeyboardButton[][] = [];
+    for (let i = 0; i < buttons.length; i += 2) {
+      rows.push(buttons.slice(i, i + 2));
+    }
+
+    return {
+      inline_keyboard: rows
+    };
+  },
+
+  /**
+   * Tạo inline keyboard cho copy partner wallet
+   */
+  buildCopyPartnerWalletKeyboard: (): TelegramBot.InlineKeyboardMarkup => {
+    const partnerWallet = '0x1ef3355161464d2465e3591d536ea74ab88de1ef';
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '📋 Copy Partner Wallet',
+            copy_text: { text: partnerWallet }
+          } as any
+        ]
+      ]
+    };
+  },
 
  
 };

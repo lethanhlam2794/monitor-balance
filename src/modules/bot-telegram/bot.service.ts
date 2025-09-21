@@ -269,7 +269,7 @@ export class BotService {
 
       if (result.success) {
         this.logger.log('Success: true', result.message);
-        await this.sendMessageWithKeyboard(chatId, result.message);
+        await this.sendMessageWithKeyboard(chatId, result.message, result.keyboard);
       } else {
         await this.sendMessage(chatId, result.message);
       }
@@ -320,11 +320,12 @@ export class BotService {
       
       if (result.success) {
         this.logger.log('Success: true', result.message);
-        // Edit loading message với kết quả
+        // Edit loading message với kết quả và keyboard
         await this.bot.editMessageText(result.message, {
           chat_id: chatId,
           message_id: loadingMsg.message_id,
-          parse_mode: 'MarkdownV2'
+          parse_mode: 'MarkdownV2',
+          reply_markup: result.keyboard
         });
       } else {
         await this.sendMessage(chatId, result.message);
@@ -440,6 +441,8 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
     }
   }
 
+
+
  
 
   async sendMessage(
@@ -467,7 +470,7 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
   ): Promise<void> {
     try {
       await this.bot.sendMessage(chatId, text, {
-        parse_mode: 'Markdown',
+        parse_mode: 'MarkdownV2',
         reply_markup: keyboard,
       });
     } catch (error) {

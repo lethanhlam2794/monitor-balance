@@ -2,12 +2,14 @@ import { Injectable, Logger } from "@nestjs/common";
 import { BotMessages, getMessage } from "@shared/enums/bot-messages.enum";
 import { MasterFundVinachainService } from "../services/masterfund-vinachain.service";
 import { AuthService } from "../../auth/auth.service";
+import { MessageBuilder } from "@shared/message_builder";
 
 
 
 interface MasterFundVinachainResponse {
   success: boolean;
   message: string;
+  keyboard?: any;
 }
 
 @Injectable()
@@ -47,10 +49,21 @@ export class MasterFundVinachainControllerService {
         userRole
       );
 
+      // Tạo keyboard dựa trên role
+      let keyboard;
+      if (userRole === 'ADMIN' || userRole === 'DEV') {
+        // Admin và Dev: keyboard cho tất cả wallets + partner wallet
+        keyboard = MessageBuilder.buildCopyMultipleWalletsKeyboard(result.data.wallets);
+      } else {
+        // User và Advanced User: chỉ keyboard cho partner wallet
+        keyboard = MessageBuilder.buildCopyPartnerWalletKeyboard();
+      }
+
       this.logger.log('Success: true', message);
       return {
         success: true,
         message,
+        keyboard,
       };
     } catch (error) {
       this.logger.error('Error in handleMasterFundVinachainCommand:', error);

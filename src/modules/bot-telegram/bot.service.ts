@@ -265,7 +265,11 @@ export class BotService {
     try {
       await this.sendMessage(chatId, getMessage(BotMessages.BUY_CARD_LOADING));
 
-      const result = await this.buyCardControllerService.handleViewBuyCardCommand();
+      // Lấy thông tin user để xác định role
+      const user = await this.authService.findByTelegramId(userId);
+      const userRole = user?.role;
+
+      const result = await this.buyCardControllerService.handleViewBuyCardCommand(userRole);
 
       if (result.success) {
         this.logger.log('Success: true', result.message);
@@ -387,13 +391,13 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
   }
 
   private getMasterFundMonitorHelpMessage(): string {
-    return `**Set Master Fund Monitoring Reminder**
+    return `**Đặt nhắc nhở kiểm tra số dư Master Fund**
 
-**Syntax:** \`/monitor_master_fund <threshold> [interval_minutes]\`
+**Cú pháp:** \`/monitor_master_fund <threshold> [interval_minutes]\`
 
 **Examples:**
-• \`/monitor_master_fund 2000\` - Alert when balance < 2000 USDT (every 15 minutes)
-• \`/monitor_master_fund 3000 30\` - Alert when balance < 3000 USDT (every 30 minutes)
+• \`/monitor_master_fund 2000\` - Đặt nhắc nhở khi balance < 2000 USDT (mỗi 15 phút)
+• \`/monitor_master_fund 3000 30\` - Đặt nhắc nhở khi balance < 3000 USDT (mỗi 30 phút)
 • \`/monitor_master_fund 0\` - Disable reminder`;
   }
 
@@ -440,8 +444,6 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
       this.logger.error('Error handling callback query:', error);
     }
   }
-
-
 
  
 

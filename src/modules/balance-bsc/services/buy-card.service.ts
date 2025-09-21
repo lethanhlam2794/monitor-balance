@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EtherscanService } from '../etherscan.service';
 import { ReminderService } from './reminder.service';
 import { ERR_CODE } from '@shared/constants';
-
 export interface BuyCardResult {
   success: boolean;
   message?: string;
@@ -19,6 +19,7 @@ export class BuyCardService {
   private readonly logger = new Logger(BuyCardService.name);
 
   constructor(
+    private configService: ConfigService,
     private etherscanService: EtherscanService,
     private reminderService: ReminderService,
   ) {}
@@ -28,8 +29,8 @@ export class BuyCardService {
    */
   async viewBuyCardBalance(): Promise<BuyCardResult> {
     try {
-      const walletAddress = process.env.ADDRESS_BUY_CARD || '';
-      const contractAddress = process.env.CONTRACT_ADDRESS_USDT || '';
+      const walletAddress = this.configService.get<string>('ADDRESS_BUY_CARD') || '';
+      const contractAddress = this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
       const chainId = 56; // BSC
 
       // Kiểm tra environment variables
@@ -150,15 +151,13 @@ Bot will automatically check balance and send alerts when balance < ${threshold}
    * Lấy hướng dẫn sử dụng command
    */
   getReminderHelpMessage(): string {
-    return `**Set Balance Monitoring Reminder**
+    return `**Đặt nhắc nhở kiểm tra số dư**
 
-**Syntax:** \`/monitor_buy_card <threshold> [interval_minutes]\`
+**Cú pháp:** \`/monitor_buy_card <threshold> [interval_minutes]\`
 
-**Examples:**
-• \`/monitor_buy_card 300\` - Alert when balance < 300 USDT (every 15 minutes)
-• \`/monitor_buy_card 500 30\` - Alert when balance < 500 USDT (every 30 minutes)
-• \`/monitor_buy_card 0\` - Disable reminder
-
-**Note:** Only Admin and above can use this feature.`;
+**Ví dụ:**
+• \`/monitor_buy_card 300\` - Đặt nhắc nhở khi balance < 300 USDT (mỗi 15 phút)
+• \`/monitor_buy_card 500 30\` - Đặt nhắc nhở khi balance < 500 USDT (mỗi 30 phút)
+• \`/monitor_buy_card 0\` - Tắt nhắc nhở.`;
   }
 }

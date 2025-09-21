@@ -20,7 +20,7 @@ export class BuyCardControllerService {
   /**
    * Xử lý command /view_buycard
    */
-  async handleViewBuyCardCommand(): Promise<BuyCardResponse> {
+  async handleViewBuyCardCommand(userRole?: string): Promise<BuyCardResponse> {
     try {
       const result = await this.buyCardService.viewBuyCardBalance();
 
@@ -32,7 +32,11 @@ export class BuyCardControllerService {
           result.data.chainId
         );
 
-        const keyboard = MessageBuilder.buildCopyWalletKeyboard(result.data.walletAddress);
+        // Chỉ tạo keyboard cho User và Advanced User
+        let keyboard;
+        if (userRole === 'USER' || userRole === 'ADVANCED_USER') {
+          keyboard = MessageBuilder.buildCopyWalletKeyboard(result.data.walletAddress);
+        }
 
         this.logger.log('Success: true', buyCardMessage);
         return {

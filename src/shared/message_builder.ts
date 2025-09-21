@@ -136,14 +136,14 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
   },
 
   /**
-   * Tạo inline keyboard cho copy wallet address
+   * Tạo inline keyboard cho copy wallet address (chung cho tất cả)
    */
   buildCopyWalletKeyboard: (walletAddress: string): TelegramBot.InlineKeyboardMarkup => {
     return {
       inline_keyboard: [
         [
           {
-            text: '📋 Copy Wallet Address',
+            text: '📋 sao chép địa chỉ ví',
             copy_text: { text: walletAddress }
           } as any
         ]
@@ -156,7 +156,7 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
    */
   buildCopyMultipleWalletsKeyboard: (wallets: Array<{ network: string; address: string }>): TelegramBot.InlineKeyboardMarkup => {
     const buttons = wallets.map((wallet, index) => ({
-      text: `📋 Copy ${wallet.network}`,
+      text: '📋 sao chép địa chỉ ví',
       copy_text: { text: wallet.address }
     } as any));
 
@@ -172,20 +172,10 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
   },
 
   /**
-   * Tạo inline keyboard cho copy partner wallet
+   * Tạo inline keyboard cho copy partner wallet (sử dụng lại buildCopyWalletKeyboard)
    */
-  buildCopyPartnerWalletKeyboard: (): TelegramBot.InlineKeyboardMarkup => {
-    const partnerWallet = '0x1ef3355161464d2465e3591d536ea74ab88de1ef';
-    return {
-      inline_keyboard: [
-        [
-          {
-            text: '📋 Copy Partner Wallet',
-            copy_text: { text: partnerWallet }
-          } as any
-        ]
-      ]
-    };
+  buildCopyPartnerWalletKeyboard: (walletAddress: string): TelegramBot.InlineKeyboardMarkup => {
+    return MessageBuilder.buildCopyWalletKeyboard(walletAddress);
   },
 
  

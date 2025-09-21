@@ -51,13 +51,12 @@ export class MasterFundVinachainControllerService {
 
       // Tạo keyboard dựa trên role
       let keyboard;
-      if (userRole === 'ADMIN' || userRole === 'DEV') {
-        // Admin và Dev: keyboard cho tất cả wallets + partner wallet
-        keyboard = MessageBuilder.buildCopyMultipleWalletsKeyboard(result.data.wallets);
-      } else {
-        // User và Advanced User: chỉ keyboard cho partner wallet
-        keyboard = MessageBuilder.buildCopyPartnerWalletKeyboard();
+      if (userRole === 'USER' || userRole === 'ADVANCED_USER') {
+        // User và Advanced User: keyboard cho partner wallet
+        const partnerWalletAddress = this.masterFundVinachainService.getPartnerWalletAddress();
+        keyboard = MessageBuilder.buildCopyPartnerWalletKeyboard(partnerWalletAddress);
       }
+      // Admin và Dev: không có keyboard (có thể copy trực tiếp từ text)
 
       this.logger.log('Success: true', message);
       return {

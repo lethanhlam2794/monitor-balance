@@ -5,6 +5,7 @@
 
 import { getMessage, BotMessages, getRegularMessageResponse } from './enums/bot-messages.enum';
 import { COMMANDS_BY_ROLE, getCommandDescription } from './enums/bot-commands.enum';
+import TelegramBot from 'node-telegram-bot-api';
 
 /**
  * Escape ký tự đặc biệt cho MarkdownV2 (trừ backticks)
@@ -133,6 +134,28 @@ ${network}${chainId}\\)
 ${lastUpdate}${new Date().toLocaleString('vi-VN')}`;
   },
 
+  /**
+   * Tạo inline keyboard cho copy wallet address
+   */
+  buildCopyWalletKeyboard: (walletAddress: string): TelegramBot.InlineKeyboardMarkup => {
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '📋 Copy wallet address',
+            copy_text: { text: walletAddress }
+          } as any
+        ]
+      ]
+    };
+  },
+
+  /**
+   * Tạo inline keyboard cho copy partner wallet (sử dụng lại buildCopyWalletKeyboard)
+   */
+  buildCopyPartnerWalletKeyboard: (walletAddress: string): TelegramBot.InlineKeyboardMarkup => {
+    return MessageBuilder.buildCopyWalletKeyboard(walletAddress);
+  },
 
  
 };

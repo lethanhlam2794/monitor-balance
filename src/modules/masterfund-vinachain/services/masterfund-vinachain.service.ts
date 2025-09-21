@@ -106,15 +106,22 @@ export class MasterFundVinachainService {
       }).join('\n');
       resultText += `*${walletLabel}*\n${walletList}\n\n`;
       
-      // Thêm partner wallet
-      resultText += `*${escapeMarkdownV2('Partner Deposit Wallet')}* \`0x1ef3355161464d2465e3591d536ea74ab88de1ef\`\n\n`;
+        // Thêm partner wallet
+        resultText += `*${escapeMarkdownV2('Partner Deposit Wallet')}* \`${this.getPartnerWalletAddress()}\`\n\n`;
     } else {
       // User và Advanced User: chỉ hiển thị partner wallet
-      resultText += `*${partnerWalletLabel}* \`0x1ef3355161464d2465e3591d536ea74ab88de1ef\`\n\n`;
+      resultText += `*${partnerWalletLabel}* \`${this.getPartnerWalletAddress()}\`\n\n`;
     }
 
     resultText += `_${lastUpdate} ${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}_`;
     return resultText;
+  }
+
+  /**
+   * Lấy partner wallet address
+   */
+  getPartnerWalletAddress(): string {
+    return this.configService.get<string>('WALLET_DEPOSIT_MASTER_FUND') || 'address not found';
   }
 
   /**

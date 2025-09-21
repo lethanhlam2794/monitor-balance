@@ -314,7 +314,7 @@ export class BotService {
       }
 
       // Gửi loading message
-      const loadingMsg = await this.sendMessage(chatId, 'Loading Master Fund information...');
+      const loadingMsg = await this.sendMessage(chatId, 'Đang tải thông tin Master Fund...');
 
       const result = await this.masterFundVinachainControllerService.handleMasterFundVinachainCommand(chatId, userId, commandText);
       
@@ -364,20 +364,20 @@ export class BotService {
       
       if (success) {
         if (threshold === 0) {
-          this.logger.log('Success: true', 'Master Fund monitoring reminder disabled');
-          await this.sendMessage(chatId, 'Master Fund monitoring reminder disabled successfully!');
+          this.logger.log('Success: true', 'Đã tắt nhắc nhở theo dõi Master Fund');
+          await this.sendMessage(chatId, 'Đã tắt nhắc nhở theo dõi Master Fund thành công!');
         } else {
-          this.logger.log('Success: true', `Master Fund monitoring reminder set: threshold ${threshold}, interval ${intervalMinutes} minutes`);
-          await this.sendMessage(chatId, `**Master Fund Reminder Set Successfully!**
+          this.logger.log('Success: true', `Đã đặt nhắc nhở theo dõi Master Fund: ngưỡng ${threshold}, khoảng cách ${intervalMinutes} phút`);
+          await this.sendMessage(chatId, `**Đã đặt nhắc nhở Master Fund thành công!**
 
-**Alert Threshold:** ${threshold} USDT
-**Check Interval:** ${intervalMinutes} minutes
-**Status:** Active
+**Ngưỡng cảnh báo:** ${threshold} USDT
+**Khoảng cách kiểm tra:** ${intervalMinutes} phút
+**Trạng thái:** Hoạt động
 
-Bot will automatically check Master Fund balance and send alerts when balance < ${threshold} USDT.`);
+Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi số dư < ${threshold} USDT.`);
         }
       } else {
-        await this.sendMessage(chatId, 'Error: Invalid parameters. Please check your input.');
+        await this.sendMessage(chatId, 'Lỗi: Tham số không hợp lệ. Vui lòng kiểm tra lại đầu vào.');
       }
     } catch (error) {
       this.logger.error('Error in handleMonitorMasterFundCommand:', error);

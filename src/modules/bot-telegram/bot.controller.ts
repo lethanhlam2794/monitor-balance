@@ -69,10 +69,10 @@ export class BotController {
       });
 
       this.logger.log(`Message sent to chat ${chatId}`);
-      return { success: true, message: 'Message sent successfully' };
+      return { success: true, message: 'Tin nhắn đã được gửi thành công' };
     } catch (error) {
       this.logger.error('Error sending message:', error);
-      return { success: false, message: 'Failed to send message' };
+      return { success: false, message: 'Không thể gửi tin nhắn' };
     }
   }
 
@@ -88,7 +88,7 @@ export class BotController {
       return { success: true, data: botInfo };
     } catch (error) {
       this.logger.error('Error getting bot info:', error);
-      return { success: false, message: 'Failed to get bot info' };
+      return { success: false, message: 'Không thể lấy thông tin bot' };
     }
   }
 
@@ -111,7 +111,7 @@ export class BotController {
       return { success: true, data: user };
     } catch (error) {
       this.logger.error('Error getting user info:', error);
-      return { success: false, message: 'Failed to get user info' };
+      return { success: false, message: 'Không thể lấy thông tin user' };
     }
   }
 
@@ -137,13 +137,13 @@ export class BotController {
 
       if (success) {
         this.logger.log(`User ${targetTelegramId} role updated to ${newRole} by ${adminTelegramId}`);
-        return { success: true, message: 'User role updated successfully' };
+        return { success: true, message: 'Cập nhật role user thành công' };
       } else {
-        return { success: false, message: 'Failed to update user role or insufficient permissions' };
+        return { success: false, message: 'Không thể cập nhật role user hoặc không đủ quyền' };
       }
     } catch (error) {
       this.logger.error('Error updating user role:', error);
-      return { success: false, message: 'Failed to update user role' };
+      return { success: false, message: 'Không thể cập nhật role user' };
     }
   }
 
@@ -168,7 +168,7 @@ export class BotController {
       return { success: true, data: users };
     } catch (error) {
       this.logger.error('Error getting users:', error);
-      return { success: false, message: 'Failed to get users' };
+      return { success: false, message: 'Không thể lấy danh sách users' };
     }
   }
 
@@ -184,7 +184,7 @@ export class BotController {
       return { success: true, data: stats };
     } catch (error) {
       this.logger.error('Error getting stats:', error);
-      return { success: false, message: 'Failed to get stats' };
+      return { success: false, message: 'Không thể lấy thống kê' };
     }
   }
 
@@ -227,7 +227,7 @@ export class BotController {
       };
     } catch (error) {
       this.logger.error('Error broadcasting message:', error);
-      return { success: false, message: 'Failed to broadcast message' };
+      return { success: false, message: 'Không thể gửi tin nhắn broadcast' };
     }
   }
 

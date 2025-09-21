@@ -61,7 +61,7 @@ export class MasterFundVinachainService {
 
       return {
         success: true,
-        message: 'Success',
+        message: 'Thành công',
         data: {
           balance,
           currency,

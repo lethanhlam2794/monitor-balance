@@ -104,7 +104,7 @@ export class MasterFundMonitoringService {
         }
       } else {
         this.logger.error(`Failed to fetch Master Fund info for user ${telegramId}.`);
-        await this.botService.sendMessage(telegramId, 'Error fetching Master Fund information.');
+        await this.botService.sendMessage(telegramId, 'Lỗi khi lấy thông tin Master Fund.');
       }
     } catch (error) {
       this.logger.error(`Error checking Master Fund for user ${telegramId}:`, error);

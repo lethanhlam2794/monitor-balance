@@ -150,13 +150,13 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   // ===========================================
   // BUY CARD MESSAGES
   // ===========================================
-  [BotMessages.BUY_CARD_LOADING]: `Checking balance...`,
-  [BotMessages.BUY_CARD_HEADER]: `Buy Card Fund Information\n\n`,
-  [BotMessages.BUY_CARD_WALLET]: `Wallet Address: `,
+  [BotMessages.BUY_CARD_LOADING]: `Đang kiểm tra số dư...`,
+  [BotMessages.BUY_CARD_HEADER]: `Thông tin Quỹ Mua Thẻ\n\n`,
+  [BotMessages.BUY_CARD_WALLET]: `Địa chỉ ví: `,
   [BotMessages.BUY_CARD_TOKEN]: `Token: `,
-  [BotMessages.BUY_CARD_BALANCE]: `Balance: `,
-  [BotMessages.BUY_CARD_NETWORK]: `Network: BSC (Chain ID: `,
-  [BotMessages.BUY_CARD_LAST_UPDATE]: `Last Updated: `,
+  [BotMessages.BUY_CARD_BALANCE]: `Số dư: `,
+  [BotMessages.BUY_CARD_NETWORK]: `Mạng: BSC (Chain ID: `,
+  [BotMessages.BUY_CARD_LAST_UPDATE]: `Cập nhật lần cuối: `,
 
   // ===========================================
   // ERROR MESSAGES

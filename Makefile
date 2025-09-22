@@ -12,7 +12,7 @@ build:
 zip: build
 	echo "git: $(shell git branch --show-current) - $(shell git rev-parse HEAD)" | tee version.txt
 	echo "build: $(shell date)" | tee -a version.txt
-	"C:/Program Files/7-Zip/7z.exe" a -tzip ${APP_NAME}.zip dist package.json yarn.lock version.txt
+	zip -r ${APP_NAME}.zip dist package.json yarn.lock version.txt
 	rm version.txt
 
 publish: zip

@@ -48,7 +48,7 @@ export class BotService {
    */
   private initializeBot(): void {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-    
+
     if (!token) {
       this.logger.error('TELEGRAM_BOT_TOKEN not found in environment variables');
       return;
@@ -111,48 +111,48 @@ export class BotService {
     }
   }
 
- 
+
   private async handleCommand(msg: TelegramMessage): Promise<void> {
     const command = msg.text?.split(' ')[0].toLowerCase();
     const chatId = msg.chat.id;
     const userId = msg.from?.id;
-    
+
     if (!userId) return;
 
     switch (command) {
       case BotCommands.START:
         await this.handleStartCommand(chatId, userId);
         break;
-      
+
       case BotCommands.HELP:
         await this.handleHelpCommand(chatId, userId);
         break;
-      
+
       case BotCommands.PROFILE:
         await this.handleProfileCommand(chatId, userId);
         break;
-      
+
       case BotCommands.ADMIN:
         await this.handleAdminCommand(chatId, userId);
         break;
-      
+
       case BotCommands.STATS:
         await this.handleStatsCommand(chatId, userId);
         break;
-      
+
       case BotCommands.VIEW_BUYCARD:
         await this.handleViewBuyCardCommand(chatId, userId);
         break;
-      
-     case BotCommands.MONITOR_BUY_CARD:
+
+      case BotCommands.MONITOR_BUY_CARD:
         await this.handleMonitorBuyCardCommand(chatId, userId, msg.text);
-        break;  
-      
-     case BotCommands.MASTERFUND_VINACHAIN:
+        break;
+
+      case BotCommands.MASTERFUND_VINACHAIN:
         await this.handleMasterFundVinachainCommand(chatId, userId, msg.text);
         break;
 
-     case BotCommands.MONITOR_MASTER_FUND:
+      case BotCommands.MONITOR_MASTER_FUND:
         await this.handleMonitorMasterFundCommand(chatId, userId, msg.text);
         break;
 
@@ -173,7 +173,7 @@ export class BotService {
    */
   private async handleHelpCommand(chatId: number, userId: number): Promise<void> {
     const user = await this.authService.findByTelegramId(userId);
-    
+
     if (!user) {
       await this.sendMessage(chatId, getMessage(BotMessages.ERROR_USER_NOT_FOUND));
       return;
@@ -198,7 +198,7 @@ export class BotService {
    */
   private async handleProfileCommand(chatId: number, userId: number): Promise<void> {
     const user = await this.authService.findByTelegramId(userId);
-    
+
     if (!user) {
       await this.sendMessage(chatId, getMessage(BotMessages.ERROR_USER_NOT_FOUND));
       return;
@@ -224,7 +224,7 @@ export class BotService {
    */
   private async handleAdminCommand(chatId: number, userId: number): Promise<void> {
     const hasPermission = await this.authService.hasPermission(userId, UserRole.ADMIN);
-    
+
     if (!hasPermission) {
       await this.sendMessage(chatId, getMessage(BotMessages.ERROR_NO_PERMISSION));
       return;
@@ -238,14 +238,14 @@ export class BotService {
    */
   private async handleStatsCommand(chatId: number, userId: number): Promise<void> {
     const hasPermission = await this.authService.hasPermission(userId, UserRole.ADMIN);
-    
+
     if (!hasPermission) {
       await this.sendMessage(chatId, getMessage(BotMessages.ERROR_NO_PERMISSION));
       return;
     }
 
     const stats = await this.authService.getUserStats();
-    
+
     const statsMessage = MessageBuilder.buildStatsMessage(
       stats.total,
       stats.activeToday,
@@ -318,10 +318,10 @@ export class BotService {
       }
 
       // Gửi loading message
-      const loadingMsg = await this.sendMessage(chatId, 'Đang tải thông tin Master Fund...');
+      const loadingMsg = await this.sendMessage(chatId, 'Đang tải thông tin Quỹ Đối Ứng...');
 
       const result = await this.masterFundVinachainControllerService.handleMasterFundVinachainCommand(chatId, userId, commandText);
-      
+
       if (result.success) {
         this.logger.log('Success: true', result.message);
         // Edit loading message với kết quả và keyboard
@@ -353,7 +353,7 @@ export class BotService {
 
       // Parse command arguments
       const args = commandText?.split(' ').slice(1) || [];
-      
+
       if (args.length === 0) {
         // Show help message
         const helpMessage = this.getMasterFundMonitorHelpMessage();
@@ -366,20 +366,20 @@ export class BotService {
       const intervalMinutes = args[1] ? parseInt(args[1]) : 15;
 
       const success = await this.masterFundMonitoringService.addMasterFundReminder(userId, threshold, intervalMinutes);
-      
+
       if (success) {
         if (threshold === 0) {
-          this.logger.log('Success: true', 'Đã tắt nhắc nhở theo dõi Master Fund');
-          await this.sendMessage(chatId, 'Đã tắt nhắc nhở theo dõi Master Fund thành công!');
+          this.logger.log('Success: true', 'Đã tắt nhắc nhở theo dõi Quỹ Đối Ứng');
+          await this.sendMessage(chatId, 'Đã tắt nhắc nhở theo dõi Quỹ Đối Ứng thành công!');
         } else {
-          this.logger.log('Success: true', `Đã đặt nhắc nhở theo dõi Master Fund: ngưỡng ${threshold}, khoảng cách ${intervalMinutes} phút`);
-          await this.sendMessage(chatId, `**Đã đặt nhắc nhở Master Fund thành công!**
+          this.logger.log('Success: true', `Đã đặt nhắc nhở theo dõi Quỹ Đối Ứng: ngưỡng ${threshold}, khoảng cách ${intervalMinutes} phút`);
+          await this.sendMessage(chatId, `**Đã đặt nhắc nhở Quỹ Đối Ứng thành công!**
 
 **Ngưỡng cảnh báo:** ${threshold} USDT
 **Khoảng cách kiểm tra:** ${intervalMinutes} phút
 **Trạng thái:** Hoạt động
 
-Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi số dư < ${threshold} USDT.`);
+Bot sẽ tự động kiểm tra số dư Quỹ Đối Ứng và gửi cảnh báo khi số dư < ${threshold} USDT.`);
         }
       } else {
         await this.sendMessage(chatId, 'Lỗi: Tham số không hợp lệ. Vui lòng kiểm tra lại đầu vào.');
@@ -391,14 +391,14 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
   }
 
   private getMasterFundMonitorHelpMessage(): string {
-    return `**Đặt nhắc nhở kiểm tra số dư Master Fund**
+    return `**Đặt nhắc nhở kiểm tra số dư Quỹ Đối Ứng**
 
 **Cú pháp:** \`/monitor_master_fund <threshold> [interval_minutes]\`
 
-**Examples:**
-• \`/monitor_master_fund 2000\` - Đặt nhắc nhở khi balance < 2000 USDT (mỗi 15 phút)
-• \`/monitor_master_fund 3000 30\` - Đặt nhắc nhở khi balance < 3000 USDT (mỗi 30 phút)
-• \`/monitor_master_fund 0\` - Disable reminder`;
+**Ví dụ:**
+• \`/monitor_master_fund 2000\` - Đặt nhắc nhở khi số dư < 2000 USDT (mỗi 15 phút)
+• \`/monitor_master_fund 3000 30\` - Đặt nhắc nhở khi số dư < 3000 USDT (mỗi 30 phút)
+• \`/monitor_master_fund 0\` - Tắt nhắc nhở`;
   }
 
   /**
@@ -407,7 +407,7 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
   private async handleRegularMessage(msg: TelegramMessage): Promise<void> {
     // Có thể thêm logic xử lý message thường ở đây
     // Ví dụ: AI chat, keyword detection, etc.
-    
+
     const response = getRegularMessageResponse(msg.text || '');
     await this.sendMessage(msg.chat.id, response);
   }
@@ -420,7 +420,7 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
       const chatId = callbackQuery.message?.chat.id;
       const data = callbackQuery.data;
       const userId = callbackQuery.from.id;
-      
+
       if (!chatId) return;
 
       // Xử lý các callback data khác nhau
@@ -445,11 +445,11 @@ Bot sẽ tự động kiểm tra số dư Master Fund và gửi cảnh báo khi 
     }
   }
 
- 
+
 
   async sendMessage(
-    chatId: number, 
-    text: string, 
+    chatId: number,
+    text: string,
     options?: TelegramBot.SendMessageOptions
   ): Promise<TelegramBot.Message> {
     try {

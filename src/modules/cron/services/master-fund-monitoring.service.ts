@@ -23,12 +23,12 @@ export class MasterFundMonitoringService {
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
     private authService: AuthService,
-  ) {}
+  ) { }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
     this.logger.debug('Checking for active Master Fund reminders...');
-    
+
     for (const [telegramId, reminder] of this.masterFundReminders) {
       if (!reminder.isActive) continue;
 
@@ -86,17 +86,17 @@ export class MasterFundMonitoringService {
 
       if (result.success && result.data) {
         const balance = result.data.balance;
-        
+
         if (balance < threshold) {
           const user = await this.authService.findByTelegramId(telegramId);
           const userRole = user?.role;
-          
+
           const alertMessage = this.buildMasterFundAlertMessage(
             balance,
             result.data.currency,
             threshold
           );
-          
+
           await this.botService.sendMessage(telegramId, alertMessage);
           this.logger.warn(`Master Fund alert sent to user ${telegramId}: Balance (${balance}) below threshold (${threshold})`);
         } else {
@@ -104,7 +104,7 @@ export class MasterFundMonitoringService {
         }
       } else {
         this.logger.error(`Failed to fetch Master Fund info for user ${telegramId}.`);
-        await this.botService.sendMessage(telegramId, 'Lỗi khi lấy thông tin Master Fund.');
+        await this.botService.sendMessage(telegramId, 'Lỗi khi lấy thông tin Quỹ Đối Ứng.');
       }
     } catch (error) {
       this.logger.error(`Error checking Master Fund for user ${telegramId}:`, error);
@@ -112,11 +112,11 @@ export class MasterFundMonitoringService {
   }
 
   private buildMasterFundAlertMessage(balance: number, currency: string, threshold: number): string {
-    return `**Master Fund Alert!**
+    return `**Cảnh Báo Quỹ Đối Ứng!**
 
-**Current Balance:** ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}
-**Alert Threshold:** ${threshold} ${currency}
+**Số dư hiện tại:** ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}
+**Ngưỡng cảnh báo:** ${threshold} ${currency}
 
-Balance is below the set threshold.`;
+Số dư đã thấp hơn ngưỡng đã đặt.`;
   }
 }

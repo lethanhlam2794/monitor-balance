@@ -151,7 +151,7 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   // BUY CARD MESSAGES
   // ===========================================
   [BotMessages.BUY_CARD_LOADING]: `Đang kiểm tra số dư...`,
-  [BotMessages.BUY_CARD_HEADER]: `Thông tin Quỹ Mua Thẻ\n\n`,
+  [BotMessages.BUY_CARD_HEADER]: `Thông tin Tiền Mua Thẻ\n\n`,
   [BotMessages.BUY_CARD_WALLET]: `Địa chỉ ví: `,
   [BotMessages.BUY_CARD_TOKEN]: `Token: `,
   [BotMessages.BUY_CARD_BALANCE]: `Số dư: `,

@@ -36,7 +36,7 @@ export class MasterFundVinachainService {
       if (!this.apiUrl) {
         throw new Error('API URL is not configured');
       }
-      
+
       const response = await fetch(this.apiUrl, {
         method: 'GET',
         headers: {
@@ -90,13 +90,13 @@ export class MasterFundVinachainService {
     isAuthorized: boolean = false,
     userRole?: string
   ): string {
-    const header = escapeMarkdownV2('Master Fund Balance');
-    const currencyLabel = escapeMarkdownV2('Currency:');
-    const balanceLabel = escapeMarkdownV2('Balance:');
-    const walletLabel = escapeMarkdownV2('Wallet Addresses:');
-    const partnerWalletLabel = escapeMarkdownV2('Master Fund Deposit Wallet:');
-    const lastUpdate = escapeMarkdownV2('Last Updated:');
-    
+    const header = escapeMarkdownV2('Số Dư Quỹ Đối Ứng');
+    const currencyLabel = escapeMarkdownV2('Loại tiền:');
+    const balanceLabel = escapeMarkdownV2('Số dư:');
+    const walletLabel = escapeMarkdownV2('Địa chỉ ví:');
+    const partnerWalletLabel = escapeMarkdownV2('Ví Nạp Tiền Đối Tác:');
+    const lastUpdate = escapeMarkdownV2('Cập nhật lần cuối:');
+
     let resultText = `${header}\n\n` +
       `*${currencyLabel}* ${escapeMarkdownV2(currency)}\n` +
       `*${balanceLabel}* ${escapeMarkdownV2(balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} ${escapeMarkdownV2(currency)}\n\n`;
@@ -108,9 +108,9 @@ export class MasterFundVinachainService {
         return `${index + 1}\\. ${escapeMarkdownV2(wallet.network)}: 🔴 \`${escapeMarkdownV2(wallet.address)}\``;
       }).join('\n');
       resultText += `*${walletLabel}*\n${walletList}\n\n`;
-      
+
       // Thêm partner wallet
-      resultText += `*${escapeMarkdownV2('Partner Deposit Wallet')}* 🔴 \`${this.getPartnerWalletAddress()}\`\n\n`;
+      resultText += `*${escapeMarkdownV2('Ví Nạp Tiền Đối Tác')}* 🔴 \`${this.getPartnerWalletAddress()}\`\n\n`;
     } else {
       // User và Advanced User: chỉ hiển thị partner wallet
       resultText += `*${partnerWalletLabel}* 🔴 \`${this.getPartnerWalletAddress()}\`\n\n`;

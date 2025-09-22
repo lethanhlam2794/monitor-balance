@@ -80,12 +80,12 @@ export class BalanceMonitoringService {
   }
 
   private buildBalanceAlertMessage(walletAddress: string, symbol: string, balance: string, threshold: number): string {
-    return `**Buy Card Alert!**
+    return `**Cảnh Báo Tiền Mua Thẻ!**
 
-**Wallet Address:** \`${walletAddress}\`
-**Current Balance:** ${balance} ${symbol}
-**Alert Threshold:** ${threshold} ${symbol}
+**Địa chỉ ví:** \`${walletAddress}\`
+**Số dư hiện tại:** ${balance} ${symbol}
+**Ngưỡng cảnh báo:** ${threshold} ${symbol}
 
-Balance is below the set threshold.`;
+Số dư đã thấp hơn ngưỡng đã đặt.`;
   }
 }

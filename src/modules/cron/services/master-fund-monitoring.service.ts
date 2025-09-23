@@ -4,6 +4,7 @@ import { MasterFundVinachainService } from '../../masterfund-vinachain/services/
 import { BotService } from '../../bot-telegram/bot.service';
 import { AuthService } from '../../auth/auth.service';
 import { UserRole } from '../../auth/enums/user-role.enum';
+import { escapeMarkdownV2, formatNumber } from '@shared/message_builder';
 
 interface MasterFundReminder {
   telegramId: number;
@@ -25,7 +26,7 @@ export class MasterFundMonitoringService {
     private authService: AuthService,
   ) { }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async handleCron() {
     this.logger.debug('Checking for active Master Fund reminders...');
 
@@ -97,7 +98,9 @@ export class MasterFundMonitoringService {
             threshold
           );
 
-          await this.botService.sendMessage(telegramId, alertMessage);
+          const walletAddress = result.data.wallets && result.data.wallets.length > 0 ? result.data.wallets[0].address : 'N/A';
+          const keyboard = this.buildCopyAddressKeyboard(walletAddress);
+          await this.botService.sendMessageWithKeyboard(telegramId, alertMessage, keyboard);
           this.logger.warn(`Master Fund alert sent to user ${telegramId}: Balance (${balance}) below threshold (${threshold})`);
         } else {
           this.logger.log(`Master Fund balance for user ${telegramId} is ${balance}, which is above threshold ${threshold}. No alert sent.`);
@@ -112,11 +115,30 @@ export class MasterFundMonitoringService {
   }
 
   private buildMasterFundAlertMessage(balance: number, currency: string, threshold: number): string {
-    return `**Cảnh Báo Quỹ Đối Ứng!**
+    const title = escapeMarkdownV2('Cảnh Báo Quỹ Đối Ứng!');
+    const balanceLabel = escapeMarkdownV2('Số dư hiện tại:');
+    const thresholdLabel = escapeMarkdownV2('Ngưỡng cảnh báo:');
+    const footer = escapeMarkdownV2('Số dư đã thấp hơn ngưỡng đã đặt.');
 
-**Số dư hiện tại:** ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}
-**Ngưỡng cảnh báo:** ${threshold} ${currency}
+    return `*${title}*
 
-Số dư đã thấp hơn ngưỡng đã đặt.`;
+*${balanceLabel}* ${escapeMarkdownV2(formatNumber(balance))} ${escapeMarkdownV2(currency)}
+*${thresholdLabel}* ${escapeMarkdownV2(formatNumber(threshold))} ${escapeMarkdownV2(currency)}
+
+${footer}`;
   }
+
+  private buildCopyAddressKeyboard(walletAddress: string) {
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '📋 Copy địa chỉ ví',
+            url: `https://t.me/share/url?url=${encodeURIComponent(walletAddress)}`
+          }
+        ]
+      ]
+    };
+  }
+
 }

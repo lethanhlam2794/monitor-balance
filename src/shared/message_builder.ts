@@ -11,7 +11,17 @@ import TelegramBot from 'node-telegram-bot-api';
  * Escape ký tự đặc biệt cho MarkdownV2 (trừ backticks)
  */
 export const escapeMarkdownV2 = (text: string): string => {
-  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+  return text.replace(/[_*\[\]()~`>#+=|{}.!-]/g, '\\$&');
+};
+
+/**
+ * Format number with locale formatting
+ */
+export const formatNumber = (number: number): string => {
+  return number.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 };
 
 
@@ -124,7 +134,7 @@ ${getMessage(BotMessages.STATS_USER_COUNT)}${userCount}`;
     const balance = escapeMarkdownV2(getMessage(BotMessages.BUY_CARD_BALANCE));
     const network = escapeMarkdownV2(getMessage(BotMessages.BUY_CARD_NETWORK));
     const lastUpdate = escapeMarkdownV2(getMessage(BotMessages.BUY_CARD_LAST_UPDATE));
-    
+
     return `${header}${wallet}
 🔴 \`${escapeMarkdownV2(walletAddress)}\`
 
@@ -178,5 +188,5 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
     return MessageBuilder.buildCopyWalletKeyboard(walletAddress);
   },
 
- 
+
 };

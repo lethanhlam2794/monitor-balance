@@ -4,7 +4,7 @@ import { ReminderService } from '../../balance-bsc/services/reminder.service';
 import { EtherscanService } from '../../balance-bsc/etherscan.service';
 import { BotService } from '../../bot-telegram/bot.service';
 import { ConfigService } from '@nestjs/config';
-import { MessageBuilder } from '@shared/message_builder';
+import { MessageBuilder, escapeMarkdownV2, formatNumber } from '@shared/message_builder';
 import { getMessage, BotMessages } from '@shared/enums/bot-messages.enum';
 
 @Injectable()
@@ -67,7 +67,8 @@ export class BalanceMonitoringService {
         balanceInfo.balanceFormatted,
         threshold
       );
-      await this.botService.sendMessage(telegramId, alertMessage);
+      const keyboard = this.buildCopyAddressKeyboard(this.ADDRESS_BUY_CARD);
+      await this.botService.sendMessageWithKeyboard(telegramId, alertMessage, keyboard);
       this.logger.warn(`Alert sent to user ${telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${threshold})`);
     } else if (!balanceInfo) {
       this.logger.error(`Failed to fetch balance for user ${telegramId}.`);
@@ -80,12 +81,32 @@ export class BalanceMonitoringService {
   }
 
   private buildBalanceAlertMessage(walletAddress: string, symbol: string, balance: string, threshold: number): string {
-    return `**Buy Card Alert!**
+    const balanceNumber = parseFloat(balance);
+    const title = escapeMarkdownV2('Buy Card Alert!');
+    const walletLabel = escapeMarkdownV2('Wallet Address:');
+    const balanceLabel = escapeMarkdownV2('Current Balance:');
+    const thresholdLabel = escapeMarkdownV2('Alert Threshold:');
+    const footer = escapeMarkdownV2('Balance is below the set threshold.');
 
-**Wallet Address:** \`${walletAddress}\`
-**Current Balance:** ${balance} ${symbol}
-**Alert Threshold:** ${threshold} ${symbol}
+    return `*${title}*
 
-Balance is below the set threshold.`;
+*${walletLabel}* \`${escapeMarkdownV2(walletAddress)}\`
+*${balanceLabel}* ${escapeMarkdownV2(formatNumber(balanceNumber))} ${escapeMarkdownV2(symbol)}
+*${thresholdLabel}* ${escapeMarkdownV2(formatNumber(threshold))} ${escapeMarkdownV2(symbol)}
+
+${footer}`;
+  }
+
+  private buildCopyAddressKeyboard(walletAddress: string) {
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '📋 Copy wallet address',
+            url: `https://t.me/share/url?url=${encodeURIComponent(walletAddress)}`
+          }
+        ]
+      ]
+    };
   }
 }

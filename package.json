@@ -37,6 +37,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dayjs": "^1.11.13",
+    "dotenv": "^17.2.3",
     "evm-blockchain-tools": "^3.1.1",
     "lodash": "^4.17.21",
     "lru-cache": "^11.1.0",

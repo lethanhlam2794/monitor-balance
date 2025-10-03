@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { HttpModule } from '@nestjs/axios';
 import { BalanceMonitoringService } from './services/balance-monitoring.service';
 import { MasterFundMonitoringService } from './services/master-fund-monitoring.service';
 import { BalanceBscModule } from '../balance-bsc/balance-bsc.module';
@@ -11,6 +12,7 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    HttpModule,
     BalanceBscModule,
     MasterFundVinachainModule,
     forwardRef(() => BotTelegramModule),

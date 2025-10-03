@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { MessageBuilder, escapeMarkdownV2, formatNumber } from '@shared/message_builder';
 import { getMessage, BotMessages } from '@shared/enums/bot-messages.enum';
 import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
+import { ADDRESS_BUY_CARD, CONTRACT_ADDRESS_USDT } from '@shared/constants';
 
 @Injectable()
 export class BalanceMonitoringService {
@@ -22,8 +23,8 @@ export class BalanceMonitoringService {
     private configService: ConfigService,
     private discordWebhookService: DiscordWebhookService,
   ) {
-    this.ADDRESS_BUY_CARD = this.configService.get<string>('ADDRESS_BUY_CARD') || '';
-    this.CONTRACT_ADDRESS_USDT = this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
+    this.ADDRESS_BUY_CARD = ADDRESS_BUY_CARD || '';
+    this.CONTRACT_ADDRESS_USDT = CONTRACT_ADDRESS_USDT || '';
     if (!this.ADDRESS_BUY_CARD || !this.CONTRACT_ADDRESS_USDT) {
       this.logger.error('Missing ADDRESS_BUY_CARD or CONTRACT_ADDRESS_USDT environment variables. Balance monitoring will not function.');
     }

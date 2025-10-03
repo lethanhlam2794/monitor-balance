@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EtherscanService } from '../etherscan.service';
 import { ReminderService } from './reminder.service';
-import { ERR_CODE } from '@shared/constants';
+import { ERR_CODE, ADDRESS_BUY_CARD, CONTRACT_ADDRESS_USDT } from '@shared/constants';
 
 export interface BuyCardResult {
   success: boolean;
@@ -28,8 +28,8 @@ export class BuyCardService {
    */
   async viewBuyCardBalance(): Promise<BuyCardResult> {
     try {
-      const walletAddress = process.env.ADDRESS_BUY_CARD || '';
-      const contractAddress = process.env.CONTRACT_ADDRESS_USDT || '';
+      const walletAddress = ADDRESS_BUY_CARD || '';
+      const contractAddress = CONTRACT_ADDRESS_USDT || '';
       const chainId = 56; // BSC
 
       // Kiểm tra environment variables

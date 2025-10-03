@@ -6,6 +6,7 @@ import { BotService } from '../../bot-telegram/bot.service';
 import { ConfigService } from '@nestjs/config';
 import { MessageBuilder, escapeMarkdownV2, formatNumber } from '@shared/message_builder';
 import { getMessage, BotMessages } from '@shared/enums/bot-messages.enum';
+import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 
 @Injectable()
 export class BalanceMonitoringService {
@@ -19,6 +20,7 @@ export class BalanceMonitoringService {
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
     private configService: ConfigService,
+    private discordWebhookService: DiscordWebhookService,
   ) {
     this.ADDRESS_BUY_CARD = this.configService.get<string>('ADDRESS_BUY_CARD') || '';
     this.CONTRACT_ADDRESS_USDT = this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
@@ -108,5 +110,40 @@ ${footer}`;
         ]
       ]
     };
+  }
+
+  /**
+   * Send Discord notification when API fails
+   */
+  private async sendDiscordErrorNotification(): Promise<void> {
+    try {
+      // Get active reminders
+      const activeReminders = await this.reminderService.getActiveReminders();
+      
+      // Get API keys info
+      const primaryApiKey = this.configService.get<string>('ETHERSCAN_API_KEY') || '';
+      const fallbackApiKey = this.configService.get<string>('ETHERSCAN_API_KEY_2') || '';
+      
+      // Prepare user info
+      const affectedUsers = activeReminders.map(reminder => ({
+        telegramId: reminder.telegramId,
+        threshold: reminder.threshold,
+        intervalMinutes: reminder.intervalMinutes,
+        lastCheckedAt: reminder.lastCheckedAt,
+        alertCount: reminder.alertCount,
+      }));
+
+      await this.discordWebhookService.sendApiErrorNotification({
+        primaryApiKey,
+        fallbackApiKey,
+        errorMessage: 'Both primary and fallback API keys failed',
+        affectedUsers,
+        timestamp: new Date(),
+      });
+
+      this.logger.log('Discord error notification sent');
+    } catch (error) {
+      this.logger.error('Failed to send Discord error notification:', error);
+    }
   }
 }

@@ -32,16 +32,25 @@ interface TokenBalanceInfo {
 @Injectable()
 export class EtherscanService {
   private readonly logger = new Logger(EtherscanService.name);
-  private readonly apiKey: string;
+  private readonly primaryApiKey: string;
+  private readonly fallbackApiKey: string;
   private readonly baseUrl = 'https://api.etherscan.io/v2/api';
+  private currentApiKey: string;
+  private apiKeyErrors: Map<string, number> = new Map();
 
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
   ) {
-    this.apiKey = this.configService.get<string>('ETHERSCAN_API_KEY') || '';
-    if (!this.apiKey) {
-      this.logger.warn('ETHERSCAN_API_KEY not found in environment variables');
+    this.primaryApiKey = this.configService.get<string>('ETHERSCAN_API_KEY') || '';
+    this.fallbackApiKey = this.configService.get<string>('ETHERSCAN_API_KEY_2') || '';
+    this.currentApiKey = this.primaryApiKey;
+    
+    if (!this.primaryApiKey) {
+      this.logger.error('ETHERSCAN_API_KEY not found in environment variables');
+    }
+    if (!this.fallbackApiKey) {
+      this.logger.warn('ETHERSCAN_API_KEY_2 not found in environment variables - no fallback available');
     }
   }
 
@@ -57,9 +66,39 @@ export class EtherscanService {
     contractAddress: string,
     chainId: number = 56
   ): Promise<TokenBalanceInfo | null> {
+    // Try primary API key first
+    let result = await this.tryApiCall(address, contractAddress, chainId, this.primaryApiKey);
+    
+    if (result) {
+      return result;
+    }
+
+    // If primary key fails and fallback key exists, try fallback
+    if (this.fallbackApiKey && this.currentApiKey !== this.fallbackApiKey) {
+      this.logger.warn('Primary API key failed, trying fallback API key...');
+      this.currentApiKey = this.fallbackApiKey;
+      result = await this.tryApiCall(address, contractAddress, chainId, this.fallbackApiKey);
+      
+      if (result) {
+        this.logger.log('Fallback API key successful');
+        return result;
+      }
+    }
+
+    // Both API keys failed
+    this.logger.error('Both primary and fallback API keys failed');
+    return null;
+  }
+
+  private async tryApiCall(
+    address: string,
+    contractAddress: string,
+    chainId: number,
+    apiKey: string
+  ): Promise<TokenBalanceInfo | null> {
     try {
-      if (!this.apiKey) {
-        this.logger.error('ERR_CODE.MISSING_ENV_VARIABLE');
+      if (!apiKey) {
+        this.logger.error('API key is empty');
         return null;
       }
 
@@ -71,10 +110,10 @@ export class EtherscanService {
         contractaddress: contractAddress,
         address: address,
         tag: 'latest',
-        apikey: this.apiKey,
+        apikey: apiKey,
       };
 
-      this.logger.log(`Fetching token balance for address: ${address}`);
+      this.logger.log(`Fetching token balance for address: ${address} with API key: ${apiKey.substring(0, 8)}...`);
       
       const response = await firstValueFrom(
         this.httpService.get<EtherscanResponse>(url, { params })
@@ -82,7 +121,10 @@ export class EtherscanService {
 
       if (response.data.status === '1' && response.data.message === 'OK') {
         const balance = response.data.result;
-        const balanceFormatted = this.formatTokenBalance(balance, 18); // USDT có 18 decimals
+        const balanceFormatted = this.formatTokenBalance(balance, 18); // USDT has 18 decimals
+        
+        // Reset error count for this API key
+        this.apiKeyErrors.delete(apiKey);
         
         return {
           address,
@@ -93,11 +135,26 @@ export class EtherscanService {
           decimals: 18,
         };
       } else {
-        this.logger.error(`Etherscan API error: ${response.data.message}`);
+        // Increase error count for this API key
+        const errorCount = (this.apiKeyErrors.get(apiKey) || 0) + 1;
+        this.apiKeyErrors.set(apiKey, errorCount);
+        
+        // Check if it's a temporary API error (rate limit, maintenance)
+        if (response.data.message.includes('temporarily unavailable') || 
+            response.data.message.includes('rate limit') ||
+            response.data.message.includes('maintenance')) {
+          this.logger.warn(`Etherscan API temporarily unavailable: ${response.data.message} (Error count: ${errorCount})`);
+        } else {
+          this.logger.error(`Etherscan API error: ${response.data.message} (Error count: ${errorCount})`);
+        }
         return null;
       }
     } catch (error) {
-      this.logger.error('Error fetching token balance:', error);
+      // Increase error count for this API key
+      const errorCount = (this.apiKeyErrors.get(apiKey) || 0) + 1;
+      this.apiKeyErrors.set(apiKey, errorCount);
+      
+      this.logger.error(`Error fetching token balance with API key ${apiKey.substring(0, 8)}... (Error count: ${errorCount}):`, error);
       return null;
     }
   }

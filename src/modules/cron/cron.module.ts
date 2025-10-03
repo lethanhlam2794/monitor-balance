@@ -6,6 +6,7 @@ import { BalanceBscModule } from '../balance-bsc/balance-bsc.module';
 import { MasterFundVinachainModule } from '../masterfund-vinachain/masterfund-vinachain.module';
 import { BotTelegramModule } from '../bot-telegram/bot-telegram.module';
 import { AuthModule } from '../auth/auth.module';
+import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthModule } from '../auth/auth.module';
   providers: [
     BalanceMonitoringService,
     MasterFundMonitoringService,
+    DiscordWebhookService,
   ],
   exports: [
     BalanceMonitoringService,

@@ -9,6 +9,7 @@ import { ReminderService } from './services/reminder.service';
 import { BuyCardService } from './services/buy-card.service';
 import { BuyCardControllerService } from './controllers/buy-card.controller';
 import { Reminder, ReminderSchema } from './schemas/reminder.schema';
+import { BullQueueModule } from '../bull/bull-queue.module';
 
 /**
  * Balance BSC Module
@@ -22,6 +23,8 @@ import { Reminder, ReminderSchema } from './schemas/reminder.schema';
     MongooseModule.forFeature([
       { name: Reminder.name, schema: ReminderSchema }
     ]),
+    // Bull Queue Module
+    BullQueueModule,
   ],
   providers: [
     EtherscanService,

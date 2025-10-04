@@ -31,7 +31,7 @@ export class BalanceMonitoringService {
     }
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handleCron() {
     // Kiểm tra nếu API bị block quá nhiều lần
     if (this.shouldSkipMonitoring()) {

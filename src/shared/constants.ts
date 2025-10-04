@@ -1,8 +1,7 @@
 export const WALLET_DEPOSIT_MASTER_FUND = process.env.WALLET_DEPOSIT_MASTER_FUND;
 export const ADDRESS_BUY_CARD = process.env.ADDRESS_BUY_CARD;
 export const CONTRACT_ADDRESS_USDT = process.env.CONTRACT_ADDRESS_USDT;
-export const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || '';
-export const ETHERSCAN_API_KEY_2 = process.env.ETHERSCAN_API_KEY_2 || '';
+
 
 
 export const APP_ACTION = {

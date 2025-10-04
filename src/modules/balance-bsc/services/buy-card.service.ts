@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EtherscanService } from '../etherscan.service';
 import { ReminderService } from './reminder.service';
+import { BalanceMonitoringQueueService } from '../../bull/services/balance-monitoring-queue.service';
 import { ERR_CODE } from '@shared/constants';
 export interface BuyCardResult {
   success: boolean;
@@ -22,6 +23,7 @@ export class BuyCardService {
     private configService: ConfigService,
     private etherscanService: EtherscanService,
     private reminderService: ReminderService,
+    private balanceMonitoringQueueService: BalanceMonitoringQueueService,
   ) {}
 
   /**
@@ -98,14 +100,14 @@ export class BuyCardService {
       if (isNaN(threshold) || threshold < 0) {
         return {
           success: false,
-          message: 'Alert threshold must be a positive number!'
+          message: '❌ Ngưỡng cảnh báo phải là số dương!'
         };
       }
 
       if (isNaN(intervalMinutes) || intervalMinutes < 5 || intervalMinutes > 1440) {
         return {
           success: false,
-          message: 'Interval must be between 5 minutes and 1440 minutes (24 hours)!'
+          message: '❌ Tần suất kiểm tra phải từ 5 đến 1440 phút (24 giờ)!'
         };
       }
 
@@ -115,34 +117,34 @@ export class BuyCardService {
         if (success) {
           return {
             success: true,
-            message: 'Balance monitoring reminder disabled successfully!'
+            message: '✅ Đã tắt nhắc nhở kiểm tra số dư thành công!'
           };
         } else {
           return {
             success: false,
-            message: 'No active reminder found to disable!'
+            message: '❌ Không tìm thấy nhắc nhở nào để tắt!'
           };
         }
       }
 
-      // Tạo hoặc cập nhật reminder
-      await this.reminderService.createOrUpdateReminder(telegramId, threshold, intervalMinutes);
+      // Sử dụng Bull Queue để schedule job
+      await this.balanceMonitoringQueueService.scheduleUserReminder(telegramId, threshold, intervalMinutes);
       
       return {
         success: true,
-        message: `**Reminder set successfully!**
+        message: `**✅ Đã đặt nhắc nhở thành công!**
 
-**Alert Threshold:** ${threshold} USDT
-**Check Interval:** ${intervalMinutes} minutes
-**Status:** Active
+**Ngưỡng cảnh báo:** ${threshold} USDT
+**Tần suất kiểm tra:** ${intervalMinutes} phút
+**Trạng thái:** Hoạt động
 
-Bot will automatically check balance and send alerts when balance < ${threshold} USDT.`
+Bot sẽ tự động kiểm tra số dư và gửi cảnh báo khi số dư < ${threshold} USDT.`
       };
     } catch (error) {
       this.logger.error('Error in setReminder:', error);
       return {
         success: false,
-        message: 'Error occurred while setting reminder!'
+        message: '❌ Có lỗi xảy ra khi đặt nhắc nhở!'
       };
     }
   }

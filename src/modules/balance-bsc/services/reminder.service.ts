@@ -52,6 +52,20 @@ export class ReminderService {
   }
 
   /**
+   * Xóa reminder của user
+   */
+  async deleteReminder(telegramId: number): Promise<boolean> {
+    try {
+      const result = await this.reminderModel.deleteOne({ telegramId });
+      this.logger.log(`Reminder deleted for user ${telegramId}`);
+      return result.deletedCount > 0;
+    } catch (error) {
+      this.logger.error('Error deleting reminder:', error);
+      return false;
+    }
+  }
+
+  /**
    * Tắt reminder của user
    */
   async deactivateReminder(telegramId: number): Promise<boolean> {

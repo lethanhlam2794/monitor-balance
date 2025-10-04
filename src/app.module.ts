@@ -8,6 +8,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { BotTelegramModule } from './modules/bot-telegram/bot-telegram.module';
 import { MasterFundVinachainModule } from './modules/masterfund-vinachain/masterfund-vinachain.module';
 import { CronModule } from './modules/cron/cron.module';
+import { BullConfigModule } from './modules/bull/bull.module';
+import { BullQueueModule } from './modules/bull/bull-queue.module';
 
 // Import app components
 import { AppController } from './app.controller';
@@ -32,6 +34,8 @@ import { AppService } from './app.service';
     BotTelegramModule,
     MasterFundVinachainModule,
     CronModule,
+    BullConfigModule,
+    BullQueueModule,
   ],
   controllers: [AppController],
   providers: [AppService],

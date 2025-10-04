@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EtherscanService } from '../etherscan.service';
 import { ReminderService } from './reminder.service';
+import { BalanceMonitoringQueueService } from '../../bull/services/balance-monitoring-queue.service';
 import { ERR_CODE, ADDRESS_BUY_CARD, CONTRACT_ADDRESS_USDT } from '@shared/constants';
 
 export interface BuyCardResult {
@@ -21,6 +22,7 @@ export class BuyCardService {
   constructor(
     private etherscanService: EtherscanService,
     private reminderService: ReminderService,
+    private balanceMonitoringQueueService: BalanceMonitoringQueueService,
   ) {}
 
   /**
@@ -124,8 +126,8 @@ export class BuyCardService {
         }
       }
 
-      // Tạo hoặc cập nhật reminder
-      await this.reminderService.createOrUpdateReminder(telegramId, threshold, intervalMinutes);
+      // Use Bull Queue to schedule job
+      await this.balanceMonitoringQueueService.scheduleUserReminder(telegramId, threshold, intervalMinutes);
       
       return {
         success: true,

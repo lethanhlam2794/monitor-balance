@@ -25,7 +25,7 @@ export class MasterFundMonitoringService {
     private authService: AuthService,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handleCron() {
     this.logger.debug('Checking for active Master Fund reminders...');
     

@@ -4,6 +4,7 @@ import type { Queue } from 'bull';
 import { ReminderService } from '../../balance-bsc/services/reminder.service';
 import { ConfigService } from '@nestjs/config';
 import { BalanceMonitoringJobData } from '../queues/balance-monitoring.queue';
+import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 
 @Injectable()
 export class BalanceMonitoringQueueService {
@@ -14,6 +15,7 @@ export class BalanceMonitoringQueueService {
     private balanceMonitoringQueue: Queue,
     private reminderService: ReminderService,
     private configService: ConfigService,
+    private discordWebhook: DiscordWebhookService,
   ) {}
 
   /**
@@ -22,11 +24,15 @@ export class BalanceMonitoringQueueService {
   async scheduleUserReminder(
     telegramId: number,
     threshold: number,
-    intervalMinutes: number
+    intervalMinutes: number,
   ): Promise<void> {
     try {
       // Lưu reminder vào database
-      await this.reminderService.createOrUpdateReminder(telegramId, threshold, intervalMinutes);
+      await this.reminderService.createOrUpdateReminder(
+        telegramId,
+        threshold,
+        intervalMinutes,
+      );
 
       // Xóa job cũ nếu có
       await this.removeUserJobs(telegramId);
@@ -36,7 +42,8 @@ export class BalanceMonitoringQueueService {
         telegramId,
         threshold,
         walletAddress: this.configService.get<string>('ADDRESS_BUY_CARD') || '',
-        contractAddress: this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '',
+        contractAddress:
+          this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '',
         chainId: 56, // BSC
       };
 
@@ -51,12 +58,27 @@ export class BalanceMonitoringQueueService {
           jobId: `balance-${telegramId}`, // Unique job ID
           removeOnComplete: 10, // Keep last 10 completed jobs
           removeOnFail: 5, // Keep last 5 failed jobs
-        }
+        },
       );
 
-      this.logger.log(`Scheduled reminder for user ${telegramId}: every ${intervalMinutes} minutes`);
+      this.logger.log(
+        `Scheduled reminder for user ${telegramId}: every ${intervalMinutes} minutes`,
+      );
     } catch (error) {
-      this.logger.error(`Error scheduling reminder for user ${telegramId}:`, error);
+      this.logger.error(
+        `Error scheduling reminder for user ${telegramId}:`,
+        error,
+      );
+      await this.discordWebhook.auditWebhook(
+        'Queue schedule error',
+        `Failed to schedule reminder for user ${telegramId}`,
+        {
+          telegramId,
+          threshold,
+          intervalMinutes,
+          error: (error as any)?.message || String(error),
+        },
+      );
       throw error;
     }
   }
@@ -74,7 +96,15 @@ export class BalanceMonitoringQueueService {
 
       this.logger.log(`Removed reminder for user ${telegramId}`);
     } catch (error) {
-      this.logger.error(`Error removing reminder for user ${telegramId}:`, error);
+      this.logger.error(
+        `Error removing reminder for user ${telegramId}:`,
+        error,
+      );
+      await this.discordWebhook.auditWebhook(
+        'Queue remove error',
+        `Failed to remove reminder for user ${telegramId}`,
+        { telegramId, error: (error as any)?.message || String(error) },
+      );
       throw error;
     }
   }
@@ -84,8 +114,12 @@ export class BalanceMonitoringQueueService {
    */
   private async removeUserJobs(telegramId: number): Promise<void> {
     try {
-      const jobs = await this.balanceMonitoringQueue.getJobs(['waiting', 'delayed', 'active']);
-      
+      const jobs = await this.balanceMonitoringQueue.getJobs([
+        'waiting',
+        'delayed',
+        'active',
+      ]);
+
       for (const job of jobs) {
         if (job.data.telegramId === telegramId) {
           await job.remove();
@@ -94,6 +128,11 @@ export class BalanceMonitoringQueueService {
       }
     } catch (error) {
       this.logger.error(`Error removing jobs for user ${telegramId}:`, error);
+      await this.discordWebhook.auditWebhook(
+        'Queue cleanup error',
+        `Failed to cleanup jobs for user ${telegramId}`,
+        { telegramId, error: (error as any)?.message || String(error) },
+      );
     }
   }
 
@@ -103,20 +142,25 @@ export class BalanceMonitoringQueueService {
   async initializeReminders(): Promise<void> {
     try {
       this.logger.log('Initializing reminders from database...');
-      
+
       const activeReminders = await this.reminderService.getActiveReminders();
-      
+
       for (const reminder of activeReminders) {
         await this.scheduleUserReminder(
           reminder.telegramId,
           reminder.threshold,
-          reminder.intervalMinutes
+          reminder.intervalMinutes,
         );
       }
-      
+
       this.logger.log(`Initialized ${activeReminders.length} reminders`);
     } catch (error) {
       this.logger.error('Error initializing reminders:', error);
+      await this.discordWebhook.auditWebhook(
+        'Queue init error',
+        'Failed to initialize reminders from database',
+        { error: (error as any)?.message || String(error) },
+      );
       throw error;
     }
   }

@@ -12,38 +12,87 @@ export class DiscordWebhookService {
     private configService: ConfigService,
     private httpService: HttpService,
   ) {
-    this.webhookUrl = this.configService.get<string>('DISCORD_WEBHOOK_URL') || '';
+    this.webhookUrl =
+      this.configService.get<string>('DISCORD_WEBHOOK_URL') || '';
     if (!this.webhookUrl) {
-      this.logger.warn('DISCORD_WEBHOOK_URL not found in environment variables');
+      this.logger.warn(
+        'DISCORD_WEBHOOK_URL not found in environment variables',
+      );
+    }
+  }
+
+  /**
+   * Gửi audit log tùy biến vào Discord (raw error/message)
+   */
+  async auditWebhook(
+    title: string,
+    description: string,
+    extra?: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      if (!this.webhookUrl) {
+        this.logger.warn('Discord webhook URL not configured, skipping audit');
+        return;
+      }
+
+      const embed: any = {
+        title: title || 'Audit Log',
+        description: description || '',
+        color: 0x5865f2, // blurple
+        timestamp: new Date().toISOString(),
+        footer: { text: 'Telegram Bot Monitoring System' },
+      };
+
+      if (extra && Object.keys(extra).length > 0) {
+        const json =
+          '```json\n' + JSON.stringify(extra, null, 2).slice(0, 3800) + '\n```';
+        embed.fields = [
+          {
+            name: 'Details',
+            value: json,
+            inline: false,
+          },
+        ];
+      }
+
+      const payload = { embeds: [embed] };
+
+      await firstValueFrom(
+        this.httpService.post(this.webhookUrl, payload, {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    } catch (error) {
+      this.logger.error('Failed to send audit webhook:', error);
     }
   }
 
   /**
    * Gửi thông báo lỗi API đến Discord
    */
-  async sendApiErrorNotification(
-    errorDetails: {
-      primaryApiKey: string;
-      fallbackApiKey: string;
-      errorMessage: string;
-      affectedUsers: Array<{
-        telegramId: number;
-        threshold: number;
-        intervalMinutes: number;
-        lastCheckedAt: Date | null;
-        alertCount: number;
-      }>;
-      timestamp: Date;
-    }
-  ): Promise<void> {
+  async sendApiErrorNotification(errorDetails: {
+    primaryApiKey: string;
+    fallbackApiKey: string;
+    errorMessage: string;
+    affectedUsers: Array<{
+      telegramId: number;
+      threshold: number;
+      intervalMinutes: number;
+      lastCheckedAt: Date | null;
+      alertCount: number;
+    }>;
+    timestamp: Date;
+  }): Promise<void> {
     try {
       if (!this.webhookUrl) {
-        this.logger.warn('Discord webhook URL not configured, skipping notification');
+        this.logger.warn(
+          'Discord webhook URL not configured, skipping notification',
+        );
         return;
       }
 
       const embed = {
-        title: '🚨 Etherscan API Error Alert',
+        title: 'Etherscan API Error Alert',
         color: 0xff0000, // Red color
         fields: [
           {
@@ -80,13 +129,17 @@ export class DiscordWebhookService {
 
       // Thêm chi tiết từng user nếu có ít hơn 10 users
       if (errorDetails.affectedUsers.length <= 10) {
-        const userDetails = errorDetails.affectedUsers.map((user, index) => {
-          return `${index + 1}. **User ${user.telegramId}**\n` +
-                 `   - Threshold: ${user.threshold} USDT\n` +
-                 `   - Interval: ${user.intervalMinutes}min\n` +
-                 `   - Last Checked: ${user.lastCheckedAt ? new Date(user.lastCheckedAt).toLocaleString() : 'Never'}\n` +
-                 `   - Alert Count: ${user.alertCount}`;
-        }).join('\n\n');
+        const userDetails = errorDetails.affectedUsers
+          .map((user, index) => {
+            return (
+              `${index + 1}. **User ${user.telegramId}**\n` +
+              `   - Threshold: ${user.threshold} USDT\n` +
+              `   - Interval: ${user.intervalMinutes}min\n` +
+              `   - Last Checked: ${user.lastCheckedAt ? new Date(user.lastCheckedAt).toLocaleString() : 'Never'}\n` +
+              `   - Alert Count: ${user.alertCount}`
+            );
+          })
+          .join('\n\n');
 
         embed.fields.push({
           name: 'User Details',
@@ -110,7 +163,7 @@ export class DiscordWebhookService {
           headers: {
             'Content-Type': 'application/json',
           },
-        })
+        }),
       );
 
       this.logger.log('Discord notification sent successfully');
@@ -125,16 +178,18 @@ export class DiscordWebhookService {
   async sendApiRecoveryNotification(
     apiKey: string,
     recoveryTime: Date,
-    affectedUsersCount: number
+    affectedUsersCount: number,
   ): Promise<void> {
     try {
       if (!this.webhookUrl) {
-        this.logger.warn('Discord webhook URL not configured, skipping notification');
+        this.logger.warn(
+          'Discord webhook URL not configured, skipping notification',
+        );
         return;
       }
 
       const embed = {
-        title: '✅ Etherscan API Recovery',
+        title: 'Etherscan API Recovery',
         color: 0x00ff00, // Green color
         fields: [
           {
@@ -168,7 +223,7 @@ export class DiscordWebhookService {
           headers: {
             'Content-Type': 'application/json',
           },
-        })
+        }),
       );
 
       this.logger.log('Discord recovery notification sent successfully');

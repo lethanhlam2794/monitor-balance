@@ -4,10 +4,13 @@ import { ReminderService } from '../../balance-bsc/services/reminder.service';
 import { EtherscanService } from '../../balance-bsc/etherscan.service';
 import { BotService } from '../../bot-telegram/bot.service';
 import { ConfigService } from '@nestjs/config';
-import { MessageBuilder, escapeMarkdownV2, formatNumber } from '@shared/message_builder';
+import {
+  MessageBuilder,
+  escapeMarkdownV2,
+  formatNumber,
+} from '@shared/message_builder';
 import { getMessage, BotMessages } from '@shared/enums/bot-messages.enum';
 import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
-import { ADDRESS_BUY_CARD, CONTRACT_ADDRESS_USDT } from '@shared/constants';
 
 @Injectable()
 export class BalanceMonitoringService {
@@ -23,10 +26,14 @@ export class BalanceMonitoringService {
     private configService: ConfigService,
     private discordWebhookService: DiscordWebhookService,
   ) {
-    this.ADDRESS_BUY_CARD = ADDRESS_BUY_CARD || '';
-    this.CONTRACT_ADDRESS_USDT = CONTRACT_ADDRESS_USDT || '';
+    this.ADDRESS_BUY_CARD =
+      this.configService.get<string>('ADDRESS_BUY_CARD') || '';
+    this.CONTRACT_ADDRESS_USDT =
+      this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
     if (!this.ADDRESS_BUY_CARD || !this.CONTRACT_ADDRESS_USDT) {
-      this.logger.error('Missing ADDRESS_BUY_CARD or CONTRACT_ADDRESS_USDT environment variables. Balance monitoring will not function.');
+      this.logger.error(
+        'Missing ADDRESS_BUY_CARD or CONTRACT_ADDRESS_USDT environment variables. Balance monitoring will not function.',
+      );
     }
   }
 
@@ -42,25 +49,39 @@ export class BalanceMonitoringService {
 
       if (now.getTime() - lastChecked.getTime() >= intervalMs) {
         this.logger.log(`Processing reminder for user ${reminder.telegramId}`);
-        const balanceInfo = await this.checkAndSendAlert(reminder.telegramId, reminder.threshold);
+        const balanceInfo = await this.checkAndSendAlert(
+          reminder.telegramId,
+          reminder.threshold,
+        );
         if (balanceInfo) {
-          await this.reminderService.updateLastChecked(reminder.telegramId, balanceInfo.balanceFormatted);
+          await this.reminderService.updateLastChecked(
+            reminder.telegramId,
+            balanceInfo.balanceFormatted,
+          );
         }
       }
     }
   }
 
-  private async checkAndSendAlert(telegramId: number, threshold: number): Promise<any> {
+  private async checkAndSendAlert(
+    telegramId: number,
+    threshold: number,
+  ): Promise<any> {
     if (!this.ADDRESS_BUY_CARD || !this.CONTRACT_ADDRESS_USDT) {
-      this.logger.error(`Cannot check balance for user ${telegramId}: Missing environment variables.`);
-      await this.botService.sendMessage(telegramId, getMessage(BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD));
+      this.logger.error(
+        `Cannot check balance for user ${telegramId}: Missing environment variables.`,
+      );
+      await this.botService.sendMessage(
+        telegramId,
+        getMessage(BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD),
+      );
       return;
     }
 
     const balanceInfo = await this.etherscanService.getTokenBalance(
       this.ADDRESS_BUY_CARD,
       this.CONTRACT_ADDRESS_USDT,
-      56 // BSC Chain ID
+      56, // BSC Chain ID
     );
 
     if (balanceInfo && parseFloat(balanceInfo.balanceFormatted) < threshold) {
@@ -68,22 +89,38 @@ export class BalanceMonitoringService {
         this.ADDRESS_BUY_CARD,
         balanceInfo.symbol,
         balanceInfo.balanceFormatted,
-        threshold
+        threshold,
       );
       const keyboard = this.buildCopyAddressKeyboard(this.ADDRESS_BUY_CARD);
-      await this.botService.sendMessageWithKeyboard(telegramId, alertMessage, keyboard);
-      this.logger.warn(`Alert sent to user ${telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${threshold})`);
+      await this.botService.sendMessageWithKeyboard(
+        telegramId,
+        alertMessage,
+        keyboard,
+      );
+      this.logger.warn(
+        `Alert sent to user ${telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${threshold})`,
+      );
     } else if (!balanceInfo) {
       this.logger.error(`Failed to fetch balance for user ${telegramId}.`);
-      await this.botService.sendMessage(telegramId, getMessage(BotMessages.ERROR_BALANCE_FETCH_FAILED));
+      await this.botService.sendMessage(
+        telegramId,
+        getMessage(BotMessages.ERROR_BALANCE_FETCH_FAILED),
+      );
     } else {
-      this.logger.log(`Balance for user ${telegramId} is ${balanceInfo.balanceFormatted}, which is above threshold ${threshold}. No alert sent.`);
+      this.logger.log(
+        `Balance for user ${telegramId} is ${balanceInfo.balanceFormatted}, which is above threshold ${threshold}. No alert sent.`,
+      );
     }
 
     return balanceInfo;
   }
 
-  private buildBalanceAlertMessage(walletAddress: string, symbol: string, balance: string, threshold: number): string {
+  private buildBalanceAlertMessage(
+    walletAddress: string,
+    symbol: string,
+    balance: string,
+    threshold: number,
+  ): string {
     const balanceNumber = parseFloat(balance);
     const title = escapeMarkdownV2('Buy Card Alert!');
     const walletLabel = escapeMarkdownV2('Wallet Address:');
@@ -106,10 +143,10 @@ ${footer}`;
         [
           {
             text: '📋 Copy wallet address',
-            url: `https://t.me/share/url?url=${encodeURIComponent(walletAddress)}`
-          }
-        ]
-      ]
+            url: `https://t.me/share/url?url=${encodeURIComponent(walletAddress)}`,
+          },
+        ],
+      ],
     };
   }
 
@@ -120,13 +157,15 @@ ${footer}`;
     try {
       // Get active reminders
       const activeReminders = await this.reminderService.getActiveReminders();
-      
+
       // Get API keys info
-      const primaryApiKey = this.configService.get<string>('ETHERSCAN_API_KEY') || '';
-      const fallbackApiKey = this.configService.get<string>('ETHERSCAN_API_KEY_2') || '';
-      
+      const primaryApiKey =
+        this.configService.get<string>('ETHERSCAN_API_KEY') || '';
+      const fallbackApiKey =
+        this.configService.get<string>('ETHERSCAN_API_KEY_2') || '';
+
       // Prepare user info
-      const affectedUsers = activeReminders.map(reminder => ({
+      const affectedUsers = activeReminders.map((reminder) => ({
         telegramId: reminder.telegramId,
         threshold: reminder.threshold,
         intervalMinutes: reminder.intervalMinutes,

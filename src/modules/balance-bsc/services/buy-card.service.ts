@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EtherscanService } from '../etherscan.service';
 import { ReminderService } from './reminder.service';
 import { BalanceMonitoringQueueService } from '../../bull/services/balance-monitoring-queue.service';
-import { ERR_CODE, ADDRESS_BUY_CARD, CONTRACT_ADDRESS_USDT } from '@shared/constants';
+import { ERR_CODE } from '@shared/constants';
 
 export interface BuyCardResult {
   success: boolean;
@@ -23,6 +24,7 @@ export class BuyCardService {
     private etherscanService: EtherscanService,
     private reminderService: ReminderService,
     private balanceMonitoringQueueService: BalanceMonitoringQueueService,
+    private configService: ConfigService,
   ) {}
 
   /**
@@ -30,8 +32,10 @@ export class BuyCardService {
    */
   async viewBuyCardBalance(): Promise<BuyCardResult> {
     try {
-      const walletAddress = ADDRESS_BUY_CARD || '';
-      const contractAddress = CONTRACT_ADDRESS_USDT || '';
+      const walletAddress =
+        this.configService.get<string>('ADDRESS_BUY_CARD') || '';
+      const contractAddress =
+        this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
       const chainId = 56; // BSC
 
       // Kiểm tra environment variables
@@ -41,30 +45,33 @@ export class BuyCardService {
         });
         return {
           success: false,
-          message: '❌ Thiếu cấu hình địa chỉ ví Buy Card!'
+          message: '❌ Thiếu cấu hình địa chỉ ví Buy Card!',
         };
       }
 
       if (!contractAddress) {
-        this.logger.error(`Missing environment variable: CONTRACT_ADDRESS_USDT`, {
-          errorCode: ERR_CODE.MISSING_ENV_VARIABLE,
-        });
+        this.logger.error(
+          `Missing environment variable: CONTRACT_ADDRESS_USDT`,
+          {
+            errorCode: ERR_CODE.MISSING_ENV_VARIABLE,
+          },
+        );
         return {
           success: false,
-          message: '❌ Thiếu cấu hình địa chỉ contract USDT!'
+          message: '❌ Thiếu cấu hình địa chỉ contract USDT!',
         };
       }
 
       const balanceInfo = await this.etherscanService.getTokenBalance(
         walletAddress,
         contractAddress,
-        chainId
+        chainId,
       );
 
       if (!balanceInfo) {
         return {
           success: false,
-          message: '❌ Không thể lấy thông tin balance!'
+          message: '❌ Không thể lấy thông tin balance!',
         };
       }
 
@@ -74,14 +81,14 @@ export class BuyCardService {
           walletAddress,
           symbol: balanceInfo.symbol,
           balanceFormatted: balanceInfo.balanceFormatted,
-          chainId
-        }
+          chainId,
+        },
       };
     } catch (error) {
       this.logger.error('Error in viewBuyCardBalance:', error);
       return {
         success: false,
-        message: 'Error occurred while checking balance!'
+        message: 'Error occurred while checking balance!',
       };
     }
   }
@@ -92,43 +99,53 @@ export class BuyCardService {
   async setReminder(
     telegramId: number,
     threshold: number,
-    intervalMinutes: number = 15
+    intervalMinutes: number = 15,
   ): Promise<{ success: boolean; message: string }> {
     try {
       // Validate input
       if (isNaN(threshold) || threshold < 0) {
         return {
           success: false,
-          message: 'Alert threshold must be a positive number!'
+          message: 'Alert threshold must be a positive number!',
         };
       }
 
-      if (isNaN(intervalMinutes) || intervalMinutes < 5 || intervalMinutes > 1440) {
+      if (
+        isNaN(intervalMinutes) ||
+        intervalMinutes < 5 ||
+        intervalMinutes > 1440
+      ) {
         return {
           success: false,
-          message: 'Interval must be between 5 minutes and 1440 minutes (24 hours)!'
+          message:
+            'Interval must be between 5 minutes and 1440 minutes (24 hours)!',
         };
       }
 
       if (threshold === 0) {
         // Tắt nhắc nhở
-        const success = await this.reminderService.deactivateReminder(telegramId);
+        const success =
+          await this.reminderService.deactivateReminder(telegramId);
         if (success) {
           return {
             success: true,
-            message: 'Balance monitoring reminder disabled successfully!'
+            message: 'Balance monitoring reminder disabled successfully!',
           };
         } else {
           return {
             success: false,
-            message: 'No active reminder found to disable!'
+            message: 'No active reminder found to disable!',
           };
         }
       }
 
       // Use Bull Queue to schedule job
-      await this.balanceMonitoringQueueService.scheduleUserReminder(telegramId, threshold, intervalMinutes);
-      
+      await this.balanceMonitoringQueueService.scheduleUserReminder(
+        telegramId,
+        threshold,
+        intervalMinutes,
+      );
+
       return {
         success: true,
         message: `**Reminder set successfully!**
@@ -137,13 +154,13 @@ export class BuyCardService {
 **Check Interval:** ${intervalMinutes} minutes
 **Status:** Active
 
-Bot will automatically check balance and send alerts when balance < ${threshold} USDT.`
+Bot will automatically check balance and send alerts when balance < ${threshold} USDT.`,
       };
     } catch (error) {
       this.logger.error('Error in setReminder:', error);
       return {
         success: false,
-        message: 'Error occurred while setting reminder!'
+        message: 'Error occurred while setting reminder!',
       };
     }
   }

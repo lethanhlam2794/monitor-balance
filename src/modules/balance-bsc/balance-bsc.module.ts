@@ -10,6 +10,7 @@ import { BuyCardService } from './services/buy-card.service';
 import { BuyCardControllerService } from './controllers/buy-card.controller';
 import { Reminder, ReminderSchema } from './schemas/reminder.schema';
 import { BullQueueModule } from '../bull/bull-queue.module';
+import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 
 /**
  * Balance BSC Module
@@ -21,7 +22,7 @@ import { BullQueueModule } from '../bull/bull-queue.module';
     HttpModule,
     // MongooseModule cho Reminder schema
     MongooseModule.forFeature([
-      { name: Reminder.name, schema: ReminderSchema }
+      { name: Reminder.name, schema: ReminderSchema },
     ]),
     // Bull Queue Module
     BullQueueModule,
@@ -31,6 +32,7 @@ import { BullQueueModule } from '../bull/bull-queue.module';
     ReminderService,
     BuyCardService,
     BuyCardControllerService,
+    DiscordWebhookService,
   ],
   exports: [
     EtherscanService,

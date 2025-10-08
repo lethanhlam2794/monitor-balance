@@ -111,46 +111,70 @@ export class MasterFundMonitoringService {
     threshold: number,
   ): Promise<void> {
     try {
-      const result = await this.masterFundVinachainService.getMasterFundInfo();
+      // Try to get data from cache first
+      let masterFundData = await this.cacheManager.get('master_fund_balance');
 
-      if (result.success && result.data) {
-        const balance = result.data.balance;
+      // If cache is empty or expired, fetch from API
+      if (!masterFundData) {
+        this.logger.debug(
+          `Cache miss for Master Fund data, fetching from API for user ${telegramId}`,
+        );
+        const result =
+          await this.masterFundVinachainService.getMasterFundInfo();
 
-        if (balance < threshold) {
-          const user = await this.authService.findByTelegramId(telegramId);
-          const userRole = user?.role;
-
-          const alertMessage = this.buildMasterFundAlertMessage(
-            balance,
-            result.data.currency,
-            threshold,
-          );
-
-          const walletAddress =
-            result.data.wallets && result.data.wallets.length > 0
-              ? result.data.wallets[0].address
-              : 'N/A';
-          const keyboard = this.buildCopyAddressKeyboard(walletAddress);
-          await this.botService.sendMessageWithKeyboard(
-            telegramId,
-            alertMessage,
-            keyboard,
-          );
-          this.logger.warn(
-            `Master Fund alert sent to user ${telegramId}: Balance (${balance}) below threshold (${threshold})`,
+        if (result.success && result.data) {
+          masterFundData = result.data;
+          // Cache the new data
+          await this.cacheManager.set(
+            'master_fund_balance',
+            masterFundData,
+            35 * 60 * 1000, // TTL 35 minutes
           );
         } else {
-          this.logger.log(
-            `Master Fund balance for user ${telegramId} is ${balance}, which is above threshold ${threshold}. No alert sent.`,
+          this.logger.error(
+            `Failed to fetch Master Fund info for user ${telegramId}.`,
           );
+          await this.botService.sendMessage(
+            telegramId,
+            'Error fetching Master Fund information.',
+          );
+          return;
         }
       } else {
-        this.logger.error(
-          `Failed to fetch Master Fund info for user ${telegramId}.`,
+        this.logger.debug(
+          `Using cached Master Fund data for user ${telegramId}`,
         );
-        await this.botService.sendMessage(
+      }
+
+      const balance = parseFloat((masterFundData as any).balance);
+
+      if (balance < threshold) {
+        const user = await this.authService.findByTelegramId(telegramId);
+        const userRole = user?.role;
+
+        const alertMessage = this.buildMasterFundAlertMessage(
+          balance,
+          (masterFundData as any).currency || 'USDT',
+          threshold,
+        );
+
+        const walletAddress =
+          (masterFundData as any).wallets &&
+          (masterFundData as any).wallets.length > 0
+            ? (masterFundData as any).wallets[0].address
+            : 'N/A';
+        const keyboard = this.buildCopyAddressKeyboard(walletAddress);
+        await this.botService.sendMessageWithKeyboard(
           telegramId,
-          'Error fetching Master Fund information.',
+          alertMessage,
+          keyboard,
+        );
+        this.logger.warn(
+          `Master Fund alert sent to user ${telegramId}: Balance (${balance}) below threshold (${threshold})`,
+        );
+      } else {
+        this.logger.log(
+          `Master Fund balance for user ${telegramId} is ${balance}, which is above threshold ${threshold}. No alert sent.`,
         );
       }
     } catch (error) {

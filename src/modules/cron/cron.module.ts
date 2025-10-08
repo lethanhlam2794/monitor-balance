@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CacheModule } from '@nestjs/cache-manager';
 import { BalanceMonitoringService } from './services/balance-monitoring.service';
 import { MasterFundMonitoringService } from './services/master-fund-monitoring.service';
 import { BalanceBscModule } from '../balance-bsc/balance-bsc.module';
@@ -17,15 +18,13 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
     MasterFundVinachainModule,
     forwardRef(() => BotTelegramModule),
     AuthModule,
+    CacheModule.register(), // Added for Redis caching
   ],
   providers: [
     BalanceMonitoringService,
     MasterFundMonitoringService,
     DiscordWebhookService,
   ],
-  exports: [
-    BalanceMonitoringService,
-    MasterFundMonitoringService,
-  ],
+  exports: [BalanceMonitoringService, MasterFundMonitoringService],
 })
 export class CronModule {}

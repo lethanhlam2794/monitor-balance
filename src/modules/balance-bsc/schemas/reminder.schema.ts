@@ -11,8 +11,8 @@ export class Reminder {
   @Prop({ required: true })
   threshold: number; // Ngưỡng cảnh báo (USDT)
 
-  @Prop({ required: true, default: 15 })
-  intervalMinutes: number; // Khoảng thời gian kiểm tra (phút)
+  @Prop({ required: true, default: 30 })
+  intervalMinutes: number; // Khoảng thời gian kiểm tra (phút) - mặc định 30 phút
 
   @Prop({ required: true, default: true })
   isActive: boolean; // Trạng thái hoạt động

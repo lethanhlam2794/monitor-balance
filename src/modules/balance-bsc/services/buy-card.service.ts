@@ -99,7 +99,7 @@ export class BuyCardService {
   async setReminder(
     telegramId: number,
     threshold: number,
-    intervalMinutes: number = 15,
+    intervalMinutes: number = 30,
   ): Promise<{ success: boolean; message: string }> {
     try {
       // Validate input
@@ -112,13 +112,13 @@ export class BuyCardService {
 
       if (
         isNaN(intervalMinutes) ||
-        intervalMinutes < 5 ||
+        intervalMinutes < 30 ||
         intervalMinutes > 1440
       ) {
         return {
           success: false,
           message:
-            'Interval must be between 5 minutes and 1440 minutes (24 hours)!',
+            'Interval must be between 30 minutes and 1440 minutes (24 hours)!',
         };
       }
 
@@ -148,13 +148,13 @@ export class BuyCardService {
 
       return {
         success: true,
-        message: `**Reminder set successfully!**
+        message: `**✅ Reminder set successfully!**
 
 **Alert Threshold:** ${threshold} USDT
 **Check Interval:** ${intervalMinutes} minutes
 **Status:** Active
 
-Bot will automatically check balance and send alerts when balance < ${threshold} USDT.`,
+Bot will automatically check balance every 30 minutes and send alerts 5 minutes after check if balance < ${threshold} USDT.`,
       };
     } catch (error) {
       this.logger.error('Error in setReminder:', error);
@@ -171,13 +171,13 @@ Bot will automatically check balance and send alerts when balance < ${threshold}
   getReminderHelpMessage(): string {
     return `**Set Balance Monitoring Reminder**
 
-**Syntax:** \`/monitor_buy_card <threshold> [interval_minutes]\`
+**Syntax:** \`/monitor_buy_card\`
 
-**Examples:**
-• \`/monitor_buy_card 300\` - Alert when balance < 300 USDT (every 15 minutes)
-• \`/monitor_buy_card 500 30\` - Alert when balance < 500 USDT (every 30 minutes)
-• \`/monitor_buy_card 0\` - Disable reminder
+Use this command to choose alert threshold from menu or enter custom number.
 
-**Note:** Only Admin and above can use this feature.`;
+**Operation:**
+• Bot checks balance every 30 minutes
+• Send notifications 5 minutes after check if balance < set threshold
+• Uses Redis cache for performance optimization`;
   }
 }

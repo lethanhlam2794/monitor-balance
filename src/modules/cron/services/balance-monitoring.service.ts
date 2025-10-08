@@ -11,12 +11,16 @@ import {
 } from '@shared/message_builder';
 import { getMessage, BotMessages } from '@shared/enums/bot-messages.enum';
 import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class BalanceMonitoringService {
   private readonly logger = new Logger(BalanceMonitoringService.name);
   private readonly ADDRESS_BUY_CARD: string;
   private readonly CONTRACT_ADDRESS_USDT: string;
+  private apiErrorCount = 0;
+  private lastApiErrorTime: Date | null = null;
 
   constructor(
     private reminderService: ReminderService,
@@ -25,6 +29,7 @@ export class BalanceMonitoringService {
     private botService: BotService,
     private configService: ConfigService,
     private discordWebhookService: DiscordWebhookService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.ADDRESS_BUY_CARD =
       this.configService.get<string>('ADDRESS_BUY_CARD') || '';
@@ -37,46 +42,14 @@ export class BalanceMonitoringService {
     }
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
-    this.logger.debug('Checking for active reminders...');
-    const activeReminders = await this.reminderService.getActiveReminders();
-
-    for (const reminder of activeReminders) {
-      const now = new Date();
-      const lastChecked = reminder.lastCheckedAt || new Date(0);
-      const intervalMs = reminder.intervalMinutes * 60 * 1000;
-
-      if (now.getTime() - lastChecked.getTime() >= intervalMs) {
-        this.logger.log(`Processing reminder for user ${reminder.telegramId}`);
-        const balanceInfo = await this.checkAndSendAlert(
-          reminder.telegramId,
-          reminder.threshold,
-        );
-        if (balanceInfo) {
-          await this.reminderService.updateLastChecked(
-            reminder.telegramId,
-            balanceInfo.balanceFormatted,
-          );
-        }
-      }
-    }
-  }
-
-  private async checkAndSendAlert(
-    telegramId: number,
-    threshold: number,
-  ): Promise<any> {
-    if (!this.ADDRESS_BUY_CARD || !this.CONTRACT_ADDRESS_USDT) {
-      this.logger.error(
-        `Cannot check balance for user ${telegramId}: Missing environment variables.`,
-      );
-      await this.botService.sendMessage(
-        telegramId,
-        getMessage(BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD),
-      );
+    if (this.shouldSkipMonitoring()) {
+      this.logger.debug('Skipping monitoring due to API issues...');
       return;
     }
+
+    this.logger.debug('Fetching balance from Etherscan API...');
 
     const balanceInfo = await this.etherscanService.getTokenBalance(
       this.ADDRESS_BUY_CARD,
@@ -84,75 +57,115 @@ export class BalanceMonitoringService {
       56, // BSC Chain ID
     );
 
-    if (balanceInfo && parseFloat(balanceInfo.balanceFormatted) < threshold) {
-      const alertMessage = this.buildBalanceAlertMessage(
-        this.ADDRESS_BUY_CARD,
-        balanceInfo.symbol,
-        balanceInfo.balanceFormatted,
-        threshold,
+    if (balanceInfo) {
+      this.logger.log(
+        `Balance fetched: ${balanceInfo.balanceFormatted} ${balanceInfo.symbol}`,
       );
-      const keyboard = this.buildCopyAddressKeyboard(this.ADDRESS_BUY_CARD);
-      await this.botService.sendMessageWithKeyboard(
-        telegramId,
-        alertMessage,
-        keyboard,
+
+      await this.cacheManager.set(
+        'buy_card_balance',
+        balanceInfo,
+        35 * 60 * 1000, // TTL 35 minutes
       );
-      this.logger.warn(
-        `Alert sent to user ${telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${threshold})`,
-      );
-    } else if (!balanceInfo) {
-      this.logger.error(`Failed to fetch balance for user ${telegramId}.`);
-      await this.botService.sendMessage(
-        telegramId,
-        getMessage(BotMessages.ERROR_BALANCE_FETCH_FAILED),
+
+      this.apiErrorCount = 0;
+
+      setTimeout(
+        async () => {
+          await this.sendNotificationsToUsers(balanceInfo);
+        },
+        5 * 60 * 1000, // 5 minutes delay
       );
     } else {
-      this.logger.log(
-        `Balance for user ${telegramId} is ${balanceInfo.balanceFormatted}, which is above threshold ${threshold}. No alert sent.`,
-      );
-    }
+      this.apiErrorCount++;
+      this.lastApiErrorTime = new Date();
 
-    return balanceInfo;
+      if (this.apiErrorCount >= 3) {
+        await this.sendDiscordErrorNotification();
+      }
+    }
+  }
+
+  private shouldSkipMonitoring(): boolean {
+    if (this.apiErrorCount >= 3 && this.lastApiErrorTime) {
+      const timeSinceLastError = Date.now() - this.lastApiErrorTime.getTime();
+      const skipDuration = 30 * 60 * 1000; // 30 minutes
+
+      if (timeSinceLastError < skipDuration) {
+        return true;
+      } else {
+        // Reset error count after skip duration
+        this.apiErrorCount = 0;
+        this.lastApiErrorTime = null;
+      }
+    }
+    return false;
+  }
+
+  private async sendNotificationsToUsers(balanceInfo: any): Promise<void> {
+    try {
+      this.logger.debug('Sending notifications to users...');
+      const activeReminders = await this.reminderService.getActiveReminders();
+
+      for (const reminder of activeReminders) {
+        const balance = parseFloat(balanceInfo.balanceFormatted);
+
+        if (balance < reminder.threshold) {
+          const alertMessage = this.buildBalanceAlertMessage(
+            this.ADDRESS_BUY_CARD,
+            balanceInfo.symbol,
+            balanceInfo.balanceFormatted,
+            reminder.threshold,
+          );
+
+          await this.botService.sendMessage(reminder.telegramId, alertMessage);
+          await this.reminderService.updateLastChecked(
+            reminder.telegramId,
+            balanceInfo.balanceFormatted,
+          );
+
+          this.logger.warn(
+            `Alert sent to user ${reminder.telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${reminder.threshold})`,
+          );
+        } else {
+          this.logger.log(
+            `Balance for user ${reminder.telegramId} is ${balanceInfo.balanceFormatted}, which is above threshold ${reminder.threshold}. No alert sent.`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error sending notifications to users:', error);
+    }
   }
 
   private buildBalanceAlertMessage(
-    walletAddress: string,
+    address: string,
     symbol: string,
     balance: string,
     threshold: number,
   ): string {
-    const balanceNumber = parseFloat(balance);
-    const title = escapeMarkdownV2('Buy Card Alert!');
-    const walletLabel = escapeMarkdownV2('Wallet Address:');
-    const balanceLabel = escapeMarkdownV2('Current Balance:');
-    const thresholdLabel = escapeMarkdownV2('Alert Threshold:');
-    const footer = escapeMarkdownV2('Balance is below the set threshold.');
+    const formattedBalance = formatNumber(parseFloat(balance));
+    const formattedThreshold = formatNumber(threshold);
+    const addressShort = `${address.slice(0, 6)}...${address.slice(-4)}`;
 
-    return `*${title}*
+    return `🚨 *Balance Alert*
 
-*${walletLabel}* \`${escapeMarkdownV2(walletAddress)}\`
-*${balanceLabel}* ${escapeMarkdownV2(formatNumber(balanceNumber))} ${escapeMarkdownV2(symbol)}
-*${thresholdLabel}* ${escapeMarkdownV2(formatNumber(threshold))} ${escapeMarkdownV2(symbol)}
+*Buy Card Fund Balance:*
+\`${formattedBalance} ${symbol}\`
 
-${footer}`;
+*Alert Threshold:*
+\`${formattedThreshold} ${symbol}\`
+
+*Wallet Address:*
+\`${addressShort}\`
+
+*Status:* ⚠️ Balance below threshold
+
+*Time:* ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })}
+
+Please check your Buy Card Fund balance\\.`;
   }
 
-  private buildCopyAddressKeyboard(walletAddress: string) {
-    return {
-      inline_keyboard: [
-        [
-          {
-            text: '📋 Copy wallet address',
-            url: `https://t.me/share/url?url=${encodeURIComponent(walletAddress)}`,
-          },
-        ],
-      ],
-    };
-  }
-
-  /**
-   * Send Discord notification when API fails
-   */
   private async sendDiscordErrorNotification(): Promise<void> {
     try {
       // Get active reminders
@@ -174,9 +187,13 @@ ${footer}`;
       }));
 
       await this.discordWebhookService.sendApiErrorNotification({
-        primaryApiKey,
-        fallbackApiKey,
-        errorMessage: 'Both primary and fallback API keys failed',
+        primaryApiKey: primaryApiKey
+          ? primaryApiKey.substring(0, 8) + '...'
+          : 'Not set',
+        fallbackApiKey: fallbackApiKey
+          ? fallbackApiKey.substring(0, 8) + '...'
+          : 'Not set',
+        errorMessage: 'Multiple consecutive API failures detected',
         affectedUsers,
         timestamp: new Date(),
       });

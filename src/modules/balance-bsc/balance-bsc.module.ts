@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CacheModule } from '@nestjs/cache-manager';
 
 // Import services và schemas
 import { EtherscanService } from './etherscan.service';
@@ -26,6 +27,8 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
     ]),
     // Bull Queue Module
     BullQueueModule,
+    // Cache Module for Redis caching
+    CacheModule.register(),
   ],
   providers: [
     EtherscanService,
@@ -39,6 +42,7 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
     ReminderService,
     BuyCardService,
     BuyCardControllerService,
+    DiscordWebhookService,
   ], // Export để các module khác có thể sử dụng
 })
 export class BalanceBscModule {}

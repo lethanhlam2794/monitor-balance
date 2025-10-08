@@ -85,67 +85,67 @@ export const MESSAGE_CONTENT: Record<BotMessages, string> = {
   // ===========================================
   // WELCOME & START MESSAGES
   // ===========================================
-  [BotMessages.WELCOME]: ` **Chào mừng đến với Telegram Bot!**
+  [BotMessages.WELCOME]: ` **Welcome to Telegram Bot!**
 
-Tôi là bot hỗ trợ của bạn. Dưới đây là các tính năng có sẵn:
+I am your support bot. Here are the available features:
 
- **Commands cơ bản:**
-• /help - Xem hướng dẫn chi tiết
-• /profile - Xem thông tin profile
-• /start - Khởi động lại bot
+ **Basic Commands:**
+• /help - View detailed guide
+• /profile - View profile information
+• /start - Restart bot
 
-Sử dụng /help để xem thêm thông tin chi tiết!`,
+Use /help to see more detailed information!`,
 
   // ===========================================
   // HELP MESSAGES
   // ===========================================
-  [BotMessages.HELP_HEADER]: ` **Hướng dẫn sử dụng Bot**\n\n`,
-  [BotMessages.HELP_FOOTER]: ` **Lưu ý:** Một số commands chỉ khả dụng với role phù hợp.`,
+  [BotMessages.HELP_HEADER]: ` **Bot Usage Guide**\n\n`,
+  [BotMessages.HELP_FOOTER]: ` **Note:** Some commands are only available with appropriate roles.`,
 
   // ===========================================
   // PROFILE MESSAGES
   // ===========================================
-  [BotMessages.PROFILE_HEADER]: ` Thông tin Profile\n\n`,
+  [BotMessages.PROFILE_HEADER]: ` Profile Information\n\n`,
   [BotMessages.PROFILE_TELEGRAM_ID]: ` Telegram ID: `,
-  [BotMessages.PROFILE_NAME]: ` Tên: `,
+  [BotMessages.PROFILE_NAME]: ` Name: `,
   [BotMessages.PROFILE_USERNAME]: ` Username: `,
-  [BotMessages.PROFILE_LANGUAGE]: ` Ngôn ngữ: `,
+  [BotMessages.PROFILE_LANGUAGE]: ` Language: `,
   [BotMessages.PROFILE_ROLE]: ` Role: `,
-  [BotMessages.PROFILE_JOINED]: ` Tham gia: `,
-  [BotMessages.PROFILE_LAST_ACTIVE]: ` Hoạt động cuối: `,
-  [BotMessages.PROFILE_STATUS]: ` Trạng thái: `,
-  [BotMessages.PROFILE_NO_USERNAME]: `Không có`,
-  [BotMessages.PROFILE_UNKNOWN_LANGUAGE]: `Không xác định`,
-  [BotMessages.PROFILE_ACTIVE]: `Hoạt động`,
-  [BotMessages.PROFILE_INACTIVE]: `Không hoạt động`,
+  [BotMessages.PROFILE_JOINED]: ` Joined: `,
+  [BotMessages.PROFILE_LAST_ACTIVE]: ` Last Active: `,
+  [BotMessages.PROFILE_STATUS]: ` Status: `,
+  [BotMessages.PROFILE_NO_USERNAME]: `None`,
+  [BotMessages.PROFILE_UNKNOWN_LANGUAGE]: `Unknown`,
+  [BotMessages.PROFILE_ACTIVE]: `Active`,
+  [BotMessages.PROFILE_INACTIVE]: `Inactive`,
 
   // ===========================================
   // ADMIN MESSAGES
   // ===========================================
   [BotMessages.ADMIN_PANEL]: ` **Admin Panel**
 
- **Quản lý Users:**
-• /users - Danh sách users
-• /promote <user_id> <role> - Nâng cấp role
-• /demote <user_id> - Hạ cấp role
+ **User Management:**
+• /users - List users
+• /promote <user_id> <role> - Promote role
+• /demote <user_id> - Demote role
 
- **Thống kê:**
-• /stats - Thống kê hệ thống
+ **Statistics:**
+• /stats - System statistics
 
- **Cài đặt:**
-• /settings - Cài đặt bot`,
+ **Settings:**
+• /settings - Bot settings`,
 
   // ===========================================
   // STATS MESSAGES
   // ===========================================
-  [BotMessages.STATS_HEADER]: ` **Thống kê hệ thống**\n\n`,
-  [BotMessages.STATS_TOTAL_USERS]: ` **Tổng users:** `,
-  [BotMessages.STATS_ACTIVE_TODAY]: ` **Hoạt động hôm nay:** `,
-  [BotMessages.STATS_ROLE_DISTRIBUTION]: ` **Phân bố theo role:**`,
+  [BotMessages.STATS_HEADER]: ` **System Statistics**\n\n`,
+  [BotMessages.STATS_TOTAL_USERS]: ` **Total Users:** `,
+  [BotMessages.STATS_ACTIVE_TODAY]: ` **Active Today:** `,
+  [BotMessages.STATS_ROLE_DISTRIBUTION]: ` **Role Distribution:**`,
   [BotMessages.STATS_DEV_COUNT]: `•  Developer: `,
   [BotMessages.STATS_ADMIN_COUNT]: `•  Admin: `,
   [BotMessages.STATS_ADVANCED_COUNT]: `•  Advanced User: `,
-  [BotMessages.STATS_USER_COUNT]: `•  User thường: `,
+  [BotMessages.STATS_USER_COUNT]: `•  Regular User: `,
 
   // ===========================================
   // BUY CARD MESSAGES
@@ -161,19 +161,19 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   // ===========================================
   // ERROR MESSAGES
   // ===========================================
-  [BotMessages.ERROR_GENERAL]: ` Có lỗi xảy ra, vui lòng thử lại sau.`,
-  [BotMessages.ERROR_USER_NOT_FOUND]: ` Không tìm thấy thông tin user.`,
-  [BotMessages.ERROR_NO_PERMISSION]: ` Bạn không có quyền truy cập tính năng này.`,
-  [BotMessages.ERROR_UNSUPPORTED_COMMAND]: ` Command không được hỗ trợ. Sử dụng /help để xem danh sách commands.`,
-  [BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD]: ` Lỗi cấu hình: Thiếu ADDRESS_BUY_CARD trong environment variables.`,
-  [BotMessages.ERROR_MISSING_CONTRACT_ADDRESS]: ` Lỗi cấu hình: Thiếu CONTRACT_ADDRESS_USDT trong environment variables.`,
-  [BotMessages.ERROR_BALANCE_FETCH_FAILED]: ` Không thể lấy thông tin balance. Vui lòng thử lại sau.`,
-  [BotMessages.ERROR_BALANCE_CHECK_FAILED]: ` Có lỗi xảy ra khi kiểm tra balance. Vui lòng thử lại sau.`,
+  [BotMessages.ERROR_GENERAL]: `An error occurred, please try again later.`,
+  [BotMessages.ERROR_USER_NOT_FOUND]: `User information not found.`,
+  [BotMessages.ERROR_NO_PERMISSION]: `You don't have permission to access this feature.`,
+  [BotMessages.ERROR_UNSUPPORTED_COMMAND]: `Command not supported. Use /help to see available commands.`,
+  [BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD]: `Configuration error: Missing ADDRESS_BUY_CARD in environment variables.`,
+  [BotMessages.ERROR_MISSING_CONTRACT_ADDRESS]: `Configuration error: Missing CONTRACT_ADDRESS_USDT in environment variables.`,
+  [BotMessages.ERROR_BALANCE_FETCH_FAILED]: `Unable to fetch balance information. Please try again later.`,
+  [BotMessages.ERROR_BALANCE_CHECK_FAILED]: `An error occurred while checking balance. Please try again later.`,
 
   // ===========================================
   // CALLBACK QUERY RESPONSES
   // ===========================================
-  [BotMessages.CALLBACK_FEATURE_DEVELOPING]: `Tính năng đang được phát triển`,
+  [BotMessages.CALLBACK_FEATURE_DEVELOPING]: `Feature is under development`,
 };
 
 /**

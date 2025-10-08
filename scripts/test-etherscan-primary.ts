@@ -1,10 +1,6 @@
 import axios from 'axios';
 import 'dotenv/config';
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function main() {
   const apiKey = process.env.ETHERSCAN_API_KEY || '';
   if (!apiKey) {
@@ -32,39 +28,43 @@ async function main() {
     apikey: apiKey,
   } as const;
 
-  const intervalMs = Number(process.env.TEST_INTERVAL_MS || 5000);
-  let count = 0;
-
   console.log(
-    'Loop calling Etherscan with primary key:',
+    'Testing Etherscan API call with primary key:',
     apiKey.substring(0, 8) + '...',
   );
-  console.log('Interval(ms):', intervalMs);
+  console.log('Address:', address);
+  console.log('Contract:', contractAddress);
+  console.log('Chain ID:', chainId);
 
-  while (true) {
-    count += 1;
-    const ts = new Date().toISOString();
-    try {
-      const res = await axios.get(url, { params: baseParams });
-      const ok = res.data?.status === '1' && res.data?.message === 'OK';
-      console.log(`[${ts}] #${count} Status: ${res.status} | OK=${ok}`);
-      if (!ok) {
-        console.error('API returned error message:', res.data?.message);
-        console.error('Raw:', JSON.stringify(res.data, null, 2));
-        process.exit(1);
-      }
-    } catch (err: any) {
-      console.error(`[${ts}] #${count} HTTP error:`, err?.message);
-      if (err?.response) {
-        console.error('Response status:', err.response.status);
-        console.error(
-          'Response data:',
-          JSON.stringify(err.response.data, null, 2),
-        );
-      }
+  const ts = new Date().toISOString();
+  try {
+    const res = await axios.get(url, { params: baseParams });
+    const ok = res.data?.status === '1' && res.data?.message === 'OK';
+    console.log(`[${ts}] Status: ${res.status} | OK=${ok}`);
+
+    if (ok) {
+      const balance = res.data?.result;
+      console.log('✅ API call successful!');
+      console.log('Balance (wei):', balance);
+      console.log(
+        'Balance (USDT):',
+        (parseInt(balance) / Math.pow(10, 18)).toFixed(6),
+      );
+    } else {
+      console.error('❌ API returned error message:', res.data?.message);
+      console.error('Raw response:', JSON.stringify(res.data, null, 2));
       process.exit(1);
     }
-    await sleep(intervalMs);
+  } catch (err: any) {
+    console.error(`[${ts}] HTTP error:`, err?.message);
+    if (err?.response) {
+      console.error('Response status:', err.response.status);
+      console.error(
+        'Response data:',
+        JSON.stringify(err.response.data, null, 2),
+      );
+    }
+    process.exit(1);
   }
 }
 

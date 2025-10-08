@@ -1,10 +1,12 @@
 // Import các thư viện cần thiết
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ERR_CODE } from '@shared/constants';
 import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 /**
  * Interface cho Etherscan API response
@@ -43,6 +45,7 @@ export class EtherscanService {
     private configService: ConfigService,
     private httpService: HttpService,
     private discordWebhook: DiscordWebhookService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.primaryApiKey =
       this.configService.get<string>('ETHERSCAN_API_KEY') || '';
@@ -72,6 +75,17 @@ export class EtherscanService {
     contractAddress: string,
     chainId: number = 56,
   ): Promise<TokenBalanceInfo | null> {
+    // Tạo cache key
+    const cacheKey = `balance:${address}:${contractAddress}:${chainId}`;
+
+    // Kiểm tra cache trước
+    const cachedBalance =
+      await this.cacheManager.get<TokenBalanceInfo>(cacheKey);
+    if (cachedBalance) {
+      this.logger.debug(`Using cached balance for ${address}`);
+      return cachedBalance;
+    }
+
     // Thử primary API key trước
     let result = await this.tryApiCall(
       address,
@@ -81,6 +95,8 @@ export class EtherscanService {
     );
 
     if (result) {
+      // Lưu vào cache với TTL 25 phút (ít hơn cron 30 phút)
+      await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000);
       return result;
     }
 
@@ -97,6 +113,8 @@ export class EtherscanService {
 
       if (result) {
         this.logger.log('Fallback API key successful');
+        // Lưu vào cache với TTL 25 phút
+        await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000);
         return result;
       }
     }

@@ -1,11 +1,14 @@
 // Import các thư viện cần thiết
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CacheModule } from '@nestjs/cache-manager';
+import { HttpModule } from '@nestjs/axios';
 
 // Import model, service và controller
 import { BotService } from './bot.service';
 import { BotController } from './bot.controller';
 import { UserModel, userSchema } from '../auth/auth.model';
+import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 
 // Import modules
 import { AuthModule } from '../auth/auth.module';
@@ -27,13 +30,15 @@ import { CronModule } from '../cron/cron.module';
     MasterFundVinachainModule,
     // Import CronModule để sử dụng MasterFundMonitoringService
     forwardRef(() => CronModule),
+    // HttpModule cho DiscordWebhookService
+    HttpModule,
+    // Cache Module cho Redis caching
+    CacheModule.register(),
     // Đăng ký UserModel với Mongoose
-    MongooseModule.forFeature([
-      { name: UserModel.name, schema: userSchema }
-    ]),
+    MongooseModule.forFeature([{ name: UserModel.name, schema: userSchema }]),
   ],
   controllers: [BotController],
-  providers: [BotService],
+  providers: [BotService, DiscordWebhookService],
   exports: [BotService], // Export để có thể sử dụng ở nơi khác
 })
 export class BotTelegramModule {}

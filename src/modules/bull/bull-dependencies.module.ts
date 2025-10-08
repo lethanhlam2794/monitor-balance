@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CacheModule } from '@nestjs/cache-manager';
 import {
   Reminder,
   ReminderSchema,
@@ -15,6 +16,7 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
     MongooseModule.forFeature([
       { name: Reminder.name, schema: ReminderSchema },
     ]),
+    CacheModule.register(),
   ],
   providers: [EtherscanService, ReminderService, DiscordWebhookService],
   exports: [EtherscanService, ReminderService, DiscordWebhookService],

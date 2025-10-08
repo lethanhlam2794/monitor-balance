@@ -13,9 +13,7 @@ export interface BuyCardResponse {
 export class BuyCardControllerService {
   private readonly logger = new Logger(BuyCardControllerService.name);
 
-  constructor(
-    private buyCardService: BuyCardService,
-  ) {}
+  constructor(private buyCardService: BuyCardService) {}
 
   /**
    * Xử lý command /view_buycard
@@ -29,13 +27,15 @@ export class BuyCardControllerService {
           result.data.walletAddress,
           result.data.symbol,
           result.data.balanceFormatted,
-          result.data.chainId
+          result.data.chainId,
         );
 
         // Chỉ tạo keyboard cho User và Advanced User
         let keyboard;
         if (userRole === 'USER' || userRole === 'ADVANCED_USER') {
-          keyboard = MessageBuilder.buildCopyWalletKeyboard(result.data.walletAddress);
+          keyboard = MessageBuilder.buildCopyWalletKeyboard(
+            result.data.walletAddress,
+          );
         }
 
         this.logger.log('Success: true', buyCardMessage);
@@ -47,7 +47,9 @@ export class BuyCardControllerService {
       } else {
         return {
           success: false,
-          message: result.message || getMessage(BotMessages.ERROR_BALANCE_FETCH_FAILED),
+          message:
+            result.message ||
+            getMessage(BotMessages.ERROR_BALANCE_FETCH_FAILED),
         };
       }
     } catch (error) {
@@ -64,12 +66,12 @@ export class BuyCardControllerService {
    */
   async handleMonitorBuyCardCommand(
     telegramId: number,
-    commandText?: string
+    commandText?: string,
   ): Promise<BuyCardResponse> {
     try {
       // Parse command arguments
       const args = commandText?.split(' ').slice(1) || [];
-      
+
       if (args.length === 0) {
         // Hiển thị hướng dẫn sử dụng
         const helpMessage = this.buyCardService.getReminderHelpMessage();
@@ -84,8 +86,12 @@ export class BuyCardControllerService {
       const intervalMinutes = args[1] ? parseInt(args[1]) : 15;
 
       // Gọi service để xử lý logic
-      const result = await this.buyCardService.setReminder(telegramId, threshold, intervalMinutes);
-      
+      const result = await this.buyCardService.setReminder(
+        telegramId,
+        threshold,
+        intervalMinutes,
+      );
+
       if (result.success) {
         this.logger.log('Success: true', result.message);
       }
@@ -100,5 +106,20 @@ export class BuyCardControllerService {
         message: getMessage(BotMessages.ERROR_GENERAL),
       };
     }
+  }
+
+  /**
+   * Đặt lịch nhắc kiểm tra balance
+   */
+  async setReminder(
+    telegramId: number,
+    threshold: number,
+    intervalMinutes: number = 30,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.buyCardService.setReminder(
+      telegramId,
+      threshold,
+      intervalMinutes,
+    );
   }
 }

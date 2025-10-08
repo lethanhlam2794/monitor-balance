@@ -12,8 +12,10 @@ export enum BotCommands {
   PROFILE = '/profile',
   VIEW_BUYCARD = '/view_buycard',
   MONITOR_BUY_CARD = '/monitor_buy_card',
+  OFF_MONITOR_BUY_CARD = '/off_monitor_buy_card',
   MASTERFUND_VINACHAIN = '/masterfund_vinachain',
   MONITOR_MASTER_FUND = '/monitor_master_fund',
+  OFF_MONITOR_MASTER_FUND = '/off_monitor_master_fund',
   // ===========================================
   // ADVANCED COMMANDS (Advanced User trở lên)
   // ===========================================
@@ -43,13 +45,16 @@ export const COMMAND_DESCRIPTIONS: Record<BotCommands, string> = {
   [BotCommands.PROFILE]: 'Xem thông tin profile',
   [BotCommands.VIEW_BUYCARD]: 'Xem balance Buy Card Fund',
   [BotCommands.MONITOR_BUY_CARD]: 'Đặt lịch nhắc kiểm tra balance buy card',
+  [BotCommands.OFF_MONITOR_BUY_CARD]: 'Tắt nhắc nhở kiểm tra balance buy card',
   [BotCommands.MASTERFUND_VINACHAIN]: 'Xem thông tin Master Fund Vinachain',
-  [BotCommands.MONITOR_MASTER_FUND]: 'Đặt lịch nhắc kiểm tra Master Fund',
+  [BotCommands.MONITOR_MASTER_FUND]:
+    'Đặt lịch nhắc kiểm tra Master Fund (với menu)',
+  [BotCommands.OFF_MONITOR_MASTER_FUND]: 'Tắt nhắc nhở kiểm tra Master Fund',
   [BotCommands.ADVANCED]: 'Tính năng nâng cao (đang phát triển)',
   [BotCommands.ADMIN]: 'Panel quản trị',
   [BotCommands.STATS]: 'Thống kê hệ thống',
   [BotCommands.USERS]: 'Quản lý users (đang phát triển)',
-  [BotCommands.DEV]: 'Developer tools (đang phát triển)', 
+  [BotCommands.DEV]: 'Developer tools (đang phát triển)',
   [BotCommands.LOGS]: 'Xem system logs (đang phát triển)',
   [BotCommands.DEBUG]: 'Debug mode (đang phát triển)',
 };
@@ -64,22 +69,14 @@ export const COMMANDS_BY_ROLE = {
     BotCommands.PROFILE,
     BotCommands.VIEW_BUYCARD,
     BotCommands.MONITOR_BUY_CARD,
+    BotCommands.OFF_MONITOR_BUY_CARD,
     BotCommands.MASTERFUND_VINACHAIN,
     BotCommands.MONITOR_MASTER_FUND,
+    BotCommands.OFF_MONITOR_MASTER_FUND,
   ],
-  ADVANCED: [
-    BotCommands.ADVANCED,
-  ],
-  ADMIN: [
-    BotCommands.ADMIN,
-    BotCommands.STATS,
-    BotCommands.USERS,
-  ],
-  DEV: [
-    BotCommands.DEV,
-    BotCommands.LOGS,
-    BotCommands.DEBUG,
-  ],
+  ADVANCED: [BotCommands.ADVANCED],
+  ADMIN: [BotCommands.ADMIN, BotCommands.STATS, BotCommands.USERS],
+  DEV: [BotCommands.DEV, BotCommands.LOGS, BotCommands.DEBUG],
 };
 
 /**
@@ -93,9 +90,11 @@ export const IMPLEMENTED_COMMANDS: Set<BotCommands> = new Set([
   BotCommands.STATS,
   BotCommands.VIEW_BUYCARD,
   BotCommands.MONITOR_BUY_CARD,
+  BotCommands.OFF_MONITOR_BUY_CARD,
   BotCommands.MASTERFUND_VINACHAIN,
   BotCommands.MONITOR_MASTER_FUND,
-  ]);
+  BotCommands.OFF_MONITOR_MASTER_FUND,
+]);
 
 /**
  * Helper function để kiểm tra command có được implement chưa

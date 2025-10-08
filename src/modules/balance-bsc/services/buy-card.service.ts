@@ -31,8 +31,10 @@ export class BuyCardService {
    */
   async viewBuyCardBalance(): Promise<BuyCardResult> {
     try {
-      const walletAddress = this.configService.get<string>('ADDRESS_BUY_CARD') || '';
-      const contractAddress = this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
+      const walletAddress =
+        this.configService.get<string>('ADDRESS_BUY_CARD') || '';
+      const contractAddress =
+        this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
       const chainId = 56; // BSC
 
       // Kiểm tra environment variables
@@ -42,30 +44,33 @@ export class BuyCardService {
         });
         return {
           success: false,
-          message: '❌ Thiếu cấu hình địa chỉ ví Buy Card!'
+          message: '❌ Thiếu cấu hình địa chỉ ví Buy Card!',
         };
       }
 
       if (!contractAddress) {
-        this.logger.error(`Missing environment variable: CONTRACT_ADDRESS_USDT`, {
-          errorCode: ERR_CODE.MISSING_ENV_VARIABLE,
-        });
+        this.logger.error(
+          `Missing environment variable: CONTRACT_ADDRESS_USDT`,
+          {
+            errorCode: ERR_CODE.MISSING_ENV_VARIABLE,
+          },
+        );
         return {
           success: false,
-          message: '❌ Thiếu cấu hình địa chỉ contract USDT!'
+          message: '❌ Thiếu cấu hình địa chỉ contract USDT!',
         };
       }
 
       const balanceInfo = await this.etherscanService.getTokenBalance(
         walletAddress,
         contractAddress,
-        chainId
+        chainId,
       );
 
       if (!balanceInfo) {
         return {
           success: false,
-          message: '❌ Không thể lấy thông tin balance!'
+          message: '❌ Không thể lấy thông tin balance!',
         };
       }
 
@@ -75,14 +80,14 @@ export class BuyCardService {
           walletAddress,
           symbol: balanceInfo.symbol,
           balanceFormatted: balanceInfo.balanceFormatted,
-          chainId
-        }
+          chainId,
+        },
       };
     } catch (error) {
       this.logger.error('Error in viewBuyCardBalance:', error);
       return {
         success: false,
-        message: 'Error occurred while checking balance!'
+        message: 'Error occurred while checking balance!',
       };
     }
   }
@@ -93,43 +98,52 @@ export class BuyCardService {
   async setReminder(
     telegramId: number,
     threshold: number,
-    intervalMinutes: number = 15
+    intervalMinutes: number = 30,
   ): Promise<{ success: boolean; message: string }> {
     try {
       // Validate input
       if (isNaN(threshold) || threshold < 0) {
         return {
           success: false,
-          message: '❌ Ngưỡng cảnh báo phải là số dương!'
+          message: '❌ Ngưỡng cảnh báo phải là số dương!',
         };
       }
 
-      if (isNaN(intervalMinutes) || intervalMinutes < 5 || intervalMinutes > 1440) {
+      if (
+        isNaN(intervalMinutes) ||
+        intervalMinutes < 30 ||
+        intervalMinutes > 1440
+      ) {
         return {
           success: false,
-          message: '❌ Tần suất kiểm tra phải từ 5 đến 1440 phút (24 giờ)!'
+          message: '❌ Tần suất kiểm tra phải từ 30 đến 1440 phút (24 giờ)!',
         };
       }
 
       if (threshold === 0) {
         // Tắt nhắc nhở
-        const success = await this.reminderService.deactivateReminder(telegramId);
+        const success =
+          await this.reminderService.deactivateReminder(telegramId);
         if (success) {
           return {
             success: true,
-            message: '✅ Đã tắt nhắc nhở kiểm tra số dư thành công!'
+            message: '✅ Đã tắt nhắc nhở kiểm tra số dư thành công!',
           };
         } else {
           return {
             success: false,
-            message: '❌ Không tìm thấy nhắc nhở nào để tắt!'
+            message: '❌ Không tìm thấy nhắc nhở nào để tắt!',
           };
         }
       }
 
       // Sử dụng Bull Queue để schedule job
-      await this.balanceMonitoringQueueService.scheduleUserReminder(telegramId, threshold, intervalMinutes);
-      
+      await this.balanceMonitoringQueueService.scheduleUserReminder(
+        telegramId,
+        threshold,
+        intervalMinutes,
+      );
+
       return {
         success: true,
         message: `**✅ Đã đặt nhắc nhở thành công!**
@@ -138,13 +152,13 @@ export class BuyCardService {
 **Tần suất kiểm tra:** ${intervalMinutes} phút
 **Trạng thái:** Hoạt động
 
-Bot sẽ tự động kiểm tra số dư và gửi cảnh báo khi số dư < ${threshold} USDT.`
+Bot sẽ tự động kiểm tra số dư mỗi 30 phút và gửi cảnh báo 5 phút sau khi kiểm tra nếu số dư < ${threshold} USDT.`,
       };
     } catch (error) {
       this.logger.error('Error in setReminder:', error);
       return {
         success: false,
-        message: '❌ Có lỗi xảy ra khi đặt nhắc nhở!'
+        message: '❌ Có lỗi xảy ra khi đặt nhắc nhở!',
       };
     }
   }
@@ -155,11 +169,13 @@ Bot sẽ tự động kiểm tra số dư và gửi cảnh báo khi số dư < $
   getReminderHelpMessage(): string {
     return `**Đặt nhắc nhở kiểm tra số dư**
 
-**Cú pháp:** \`/monitor_buy_card <threshold> [interval_minutes]\`
+**Cú pháp:** \`/monitor_buy_card\`
 
-**Ví dụ:**
-• \`/monitor_buy_card 300\` - Đặt nhắc nhở khi balance < 300 USDT (mỗi 15 phút)
-• \`/monitor_buy_card 500 30\` - Đặt nhắc nhở khi balance < 500 USDT (mỗi 30 phút)
-• \`/monitor_buy_card 0\` - Tắt nhắc nhở.`;
+Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nhập số tùy chỉnh.
+
+**Hoạt động:**
+• Bot kiểm tra số dư mỗi 30 phút
+• Gửi thông báo 5 phút sau khi kiểm tra nếu số dư < ngưỡng đã đặt
+• Sử dụng Redis cache để tối ưu hiệu suất`;
   }
 }

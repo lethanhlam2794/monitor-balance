@@ -60,6 +60,7 @@ export class MasterFundVinachainService {
         this.logger.error(errorMsg);
 
         // Bắn audit với chi tiết HTTP error
+        this.logger.log('Sending audit webhook for MasterFund HTTP error...');
         await this.discordWebhook.auditWebhook(
           'MasterFund HTTP error',
           errorMsg,
@@ -70,6 +71,7 @@ export class MasterFundVinachainService {
             token: this.token ? 'configured' : 'missing',
           },
         );
+        this.logger.log('Audit webhook sent for MasterFund HTTP error');
 
         throw new Error(errorMsg);
       }
@@ -78,6 +80,9 @@ export class MasterFundVinachainService {
 
       // Bắn audit cho tất cả response từ Vinachain API
       const isSuccess = data.success === true;
+      this.logger.log(
+        `Sending audit webhook for MasterFund API ${isSuccess ? 'success' : 'error'}...`,
+      );
       await this.discordWebhook.auditWebhook(
         isSuccess ? 'MasterFund API success' : 'MasterFund API error',
         isSuccess
@@ -89,6 +94,9 @@ export class MasterFundVinachainService {
           apiResponse: data,
           isSuccess,
         },
+      );
+      this.logger.log(
+        `Audit webhook sent for MasterFund API ${isSuccess ? 'success' : 'error'}`,
       );
 
       if (!isSuccess) {
@@ -114,6 +122,7 @@ export class MasterFundVinachainService {
       this.logger.error('Error fetching Master Fund info:', error);
 
       // Bắn audit cho exception
+      this.logger.log('Sending audit webhook for MasterFund exception...');
       await this.discordWebhook.auditWebhook(
         'MasterFund exception',
         'Unexpected exception in getMasterFundInfo',
@@ -123,6 +132,7 @@ export class MasterFundVinachainService {
           error: (error as any)?.message || String(error),
         },
       );
+      this.logger.log('Audit webhook sent for MasterFund exception');
 
       return {
         success: false,

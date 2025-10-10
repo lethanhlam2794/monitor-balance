@@ -180,6 +180,10 @@ export class BotService {
         await this.handleOffMonitorMasterFundCommand(chatId, userId);
         break;
 
+      case BotCommands.SPAM:
+        await this.handleSpamCommand(chatId, userId, msg.text);
+        break;
+
       default:
         await this.sendMessage(
           chatId,
@@ -1005,5 +1009,108 @@ Chọn tần suất kiểm tra:`;
 
   private parseThresholdInput(input: string): number {
     return parseFloat(input.replace(/[^\d.]/g, ''));
+  }
+
+  /**
+   * Handle /spam command - Spam call API Buy Card (Dev only)
+   */
+  private async handleSpamCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check if user is DEV
+      const user = await this.authService.findByTelegramId(userId);
+      if (!user || user.role !== UserRole.DEV) {
+        await this.sendMessage(
+          chatId,
+          '❌ Chỉ có Developer mới được sử dụng lệnh này!',
+        );
+        return;
+      }
+
+      // Parse spam parameters
+      const args = messageText?.split(' ').slice(1) || [];
+      const count = parseInt(args[0]) || 10; // Default 10 calls
+      const delay = parseInt(args[1]) || 1000; // Default 1 second delay
+
+      if (count > 100) {
+        await this.sendMessage(
+          chatId,
+          '❌ Số lần spam không được vượt quá 100!',
+        );
+        return;
+      }
+
+      if (delay < 100) {
+        await this.sendMessage(chatId, '❌ Delay không được nhỏ hơn 100ms!');
+        return;
+      }
+
+      await this.sendMessage(
+        chatId,
+        `🚀 Bắt đầu spam API Buy Card...\n` +
+          `📊 Số lần: ${count}\n` +
+          `⏱️ Delay: ${delay}ms\n` +
+          `⏰ Bắt đầu lúc: ${new Date().toLocaleString('vi-VN')}`,
+      );
+
+      let successCount = 0;
+      let errorCount = 0;
+      const startTime = Date.now();
+
+      // Spam API calls
+      for (let i = 1; i <= count; i++) {
+        try {
+          const result =
+            await this.buyCardControllerService.handleViewBuyCardCommand();
+
+          if (result.success) {
+            successCount++;
+            this.logger.log(`Spam call ${i}/${count}: Success`);
+          } else {
+            errorCount++;
+            this.logger.warn(
+              `Spam call ${i}/${count}: Failed - ${result.message}`,
+            );
+          }
+        } catch (error) {
+          errorCount++;
+          this.logger.error(
+            `Spam call ${i}/${count}: Error - ${error.message}`,
+          );
+        }
+
+        // Delay between calls
+        if (i < count) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
+      const endTime = Date.now();
+      const totalTime = endTime - startTime;
+
+      // Send results
+      const resultMessage =
+        `✅ Spam hoàn thành!\n\n` +
+        `📊 Kết quả:\n` +
+        `   • Thành công: ${successCount}/${count}\n` +
+        `   • Lỗi: ${errorCount}/${count}\n` +
+        `   • Tỷ lệ thành công: ${((successCount / count) * 100).toFixed(1)}%\n\n` +
+        `⏱️ Thời gian:\n` +
+        `   • Tổng thời gian: ${(totalTime / 1000).toFixed(2)}s\n` +
+        `   • Thời gian trung bình/call: ${(totalTime / count).toFixed(0)}ms\n` +
+        `   • Delay giữa các call: ${delay}ms\n\n` +
+        `⏰ Kết thúc lúc: ${new Date().toLocaleString('vi-VN')}`;
+
+      await this.sendMessage(chatId, resultMessage);
+    } catch (error) {
+      this.logger.error('Error in handleSpamCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Có lỗi xảy ra khi thực hiện spam command!',
+      );
+    }
   }
 }

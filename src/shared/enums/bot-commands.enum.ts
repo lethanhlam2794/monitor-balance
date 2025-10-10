@@ -34,6 +34,7 @@ export enum BotCommands {
   DEV = '/dev',
   LOGS = '/logs',
   DEBUG = '/debug',
+  SPAM = '/spam',
 }
 
 /**
@@ -57,6 +58,7 @@ export const COMMAND_DESCRIPTIONS: Record<BotCommands, string> = {
   [BotCommands.DEV]: 'Developer tools (đang phát triển)',
   [BotCommands.LOGS]: 'Xem system logs (đang phát triển)',
   [BotCommands.DEBUG]: 'Debug mode (đang phát triển)',
+  [BotCommands.SPAM]: 'Spam call API Buy Card (Dev only)',
 };
 
 /**
@@ -76,7 +78,7 @@ export const COMMANDS_BY_ROLE = {
   ],
   ADVANCED: [BotCommands.ADVANCED],
   ADMIN: [BotCommands.ADMIN, BotCommands.STATS, BotCommands.USERS],
-  DEV: [BotCommands.DEV, BotCommands.LOGS, BotCommands.DEBUG],
+  DEV: [BotCommands.DEV, BotCommands.LOGS, BotCommands.DEBUG, BotCommands.SPAM],
 };
 
 /**
@@ -94,6 +96,7 @@ export const IMPLEMENTED_COMMANDS: Set<BotCommands> = new Set([
   BotCommands.MASTERFUND_VINACHAIN,
   BotCommands.MONITOR_MASTER_FUND,
   BotCommands.OFF_MONITOR_MASTER_FUND,
+  BotCommands.SPAM,
 ]);
 
 /**

@@ -1,6 +1,6 @@
 /**
- * Enum cho các Bot Messages
- * Quản lý tất cả message templates của Telegram Bot
+ * Enum for Bot Messages
+ * Manage all message templates for Telegram Bot
  */
 
 export enum BotMessages {
@@ -79,7 +79,7 @@ export enum BotMessages {
 }
 
 /**
- * Mapping từ enum đến message content
+ * Message content mapping
  */
 export const MESSAGE_CONTENT: Record<BotMessages, string> = {
   // ===========================================
@@ -89,18 +89,13 @@ export const MESSAGE_CONTENT: Record<BotMessages, string> = {
 
 I am your support bot. Here are the available features:
 
- **Basic Commands:**
-• /help - View detailed guide
-• /profile - View profile information
-• /start - Restart bot
-
-Use /help to see more detailed information!`,
+Use /help to see all available commands\\.`,
 
   // ===========================================
   // HELP MESSAGES
   // ===========================================
   [BotMessages.HELP_HEADER]: ` **Bot Usage Guide**\n\n`,
-  [BotMessages.HELP_FOOTER]: ` **Note:** Some commands are only available with appropriate roles.`,
+  [BotMessages.HELP_FOOTER]: ` **Note:** Some commands are only available with appropriate roles\\.`,
 
   // ===========================================
   // PROFILE MESSAGES
@@ -124,16 +119,7 @@ Use /help to see more detailed information!`,
   // ===========================================
   [BotMessages.ADMIN_PANEL]: ` **Admin Panel**
 
- **User Management:**
-• /users - List users
-• /promote <user_id> <role> - Promote role
-• /demote <user_id> - Demote role
-
- **Statistics:**
-• /stats - System statistics
-
- **Settings:**
-• /settings - Bot settings`,
+Welcome to the admin panel\\. Here you can manage the system\\.`,
 
   // ===========================================
   // STATS MESSAGES
@@ -150,42 +136,42 @@ Use /help to see more detailed information!`,
   // ===========================================
   // BUY CARD MESSAGES
   // ===========================================
-  [BotMessages.BUY_CARD_LOADING]: `Checking balance...`,
+  [BotMessages.BUY_CARD_LOADING]: `Checking balance\\.\\.\\.`,
   [BotMessages.BUY_CARD_HEADER]: `Buy Card Fund Information\n\n`,
   [BotMessages.BUY_CARD_WALLET]: `Wallet Address: `,
   [BotMessages.BUY_CARD_TOKEN]: `Token: `,
   [BotMessages.BUY_CARD_BALANCE]: `Balance: `,
-  [BotMessages.BUY_CARD_NETWORK]: `Network: BSC (Chain ID: `,
+  [BotMessages.BUY_CARD_NETWORK]: `Network: BSC \\(Chain ID: `,
   [BotMessages.BUY_CARD_LAST_UPDATE]: `Last Updated: `,
 
   // ===========================================
   // ERROR MESSAGES
   // ===========================================
-  [BotMessages.ERROR_GENERAL]: `An error occurred, please try again later.`,
-  [BotMessages.ERROR_USER_NOT_FOUND]: `User information not found.`,
-  [BotMessages.ERROR_NO_PERMISSION]: `You don't have permission to access this feature.`,
-  [BotMessages.ERROR_UNSUPPORTED_COMMAND]: `Command not supported. Use /help to see available commands.`,
-  [BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD]: `Configuration error: Missing ADDRESS_BUY_CARD in environment variables.`,
-  [BotMessages.ERROR_MISSING_CONTRACT_ADDRESS]: `Configuration error: Missing CONTRACT_ADDRESS_USDT in environment variables.`,
-  [BotMessages.ERROR_BALANCE_FETCH_FAILED]: `Unable to fetch balance information. Please try again later.`,
-  [BotMessages.ERROR_BALANCE_CHECK_FAILED]: `An error occurred while checking balance. Please try again later.`,
+  [BotMessages.ERROR_GENERAL]: ` An error occurred, please try again later\\.`,
+  [BotMessages.ERROR_USER_NOT_FOUND]: ` User information not found\\.`,
+  [BotMessages.ERROR_NO_PERMISSION]: ` You don't have permission to access this feature\\.`,
+  [BotMessages.ERROR_UNSUPPORTED_COMMAND]: ` Command not supported\\. Use /help to see available commands\\.`,
+  [BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD]: ` Configuration Error: Missing ADDRESS_BUY_CARD in environment variables\\.`,
+  [BotMessages.ERROR_MISSING_CONTRACT_ADDRESS]: ` Configuration Error: Missing CONTRACT_ADDRESS_USDT in environment variables\\.`,
+  [BotMessages.ERROR_BALANCE_FETCH_FAILED]: ` Unable to fetch balance information\\. Please try again later\\.`,
+  [BotMessages.ERROR_BALANCE_CHECK_FAILED]: ` An error occurred while checking balance\\. Please try again later\\.`,
 
   // ===========================================
   // CALLBACK QUERY RESPONSES
   // ===========================================
-  [BotMessages.CALLBACK_FEATURE_DEVELOPING]: `Feature is under development`,
+  [BotMessages.CALLBACK_FEATURE_DEVELOPING]: `Feature under development`,
 };
 
 /**
- * Helper function để lấy message content
+ * Helper function to get message content
  */
 export const getMessage = (messageKey: BotMessages): string => {
-  return MESSAGE_CONTENT[messageKey];
+  return MESSAGE_CONTENT[messageKey] || `Message not found: ${messageKey}`;
 };
 
 /**
- * Helper function cho regular message response
+ * Helper function for regular message response
  */
 export const getRegularMessageResponse = (text: string): string => {
-  return ` Bạn đã gửi: "${text}"\n\nSử dụng /help để xem danh sách commands có sẵn.`;
+  return ` You sent: "${text}"\n\nUse /help to see available commands\\.`;
 };

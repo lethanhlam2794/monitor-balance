@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 // Import modules
 import { AuthModule } from './modules/auth/auth.module';
 import { BotTelegramModule } from './modules/bot-telegram/bot-telegram.module';
+import { BalanceBscModule } from './modules/balance-bsc/balance-bsc.module';
 import { MasterFundVinachainModule } from './modules/masterfund-vinachain/masterfund-vinachain.module';
 import { CronModule } from './modules/cron/cron.module';
 import { BullConfigModule } from './modules/bull/bull.module';
@@ -22,16 +23,19 @@ import { AppService } from './app.service';
       isGlobal: true, // Làm cho ConfigModule có thể sử dụng ở mọi nơi
       envFilePath: '.env', // Đường dẫn đến file .env
     }),
-    
+
     // Database
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/telegrambot'),
-    
+    MongooseModule.forRoot(
+      process.env.MONGODB_URI || 'mongodb://localhost:27017/telegrambot',
+    ),
+
     // Schedule
     ScheduleModule.forRoot(),
-    
+
     // Feature modules
     AuthModule,
     BotTelegramModule,
+    BalanceBscModule,
     MasterFundVinachainModule,
     CronModule,
     BullConfigModule,

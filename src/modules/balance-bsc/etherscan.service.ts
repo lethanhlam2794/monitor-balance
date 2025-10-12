@@ -74,15 +74,25 @@ export class EtherscanService {
     address: string,
     contractAddress: string,
     chainId: number = 56,
+    forceRefresh: boolean = false,
   ): Promise<TokenBalanceInfo | null> {
+    // Tạo cache key
     const cacheKey = `balance:${address}:${contractAddress}:${chainId}`;
-    const cachedBalance =
-      await this.cacheManager.get<TokenBalanceInfo>(cacheKey);
-    if (cachedBalance) {
-      this.logger.debug(`Using cached balance for ${address}`);
-      return cachedBalance;
+
+    // Kiểm tra cache trước (trừ khi force refresh)
+    if (!forceRefresh) {
+      const cachedBalance =
+        await this.cacheManager.get<TokenBalanceInfo>(cacheKey);
+      if (cachedBalance) {
+        this.logger.debug(`Using cached balance for ${address}`);
+        return cachedBalance;
+      }
+    } else {
+      this.logger.debug(`Force refresh: clearing cache for ${address}`);
+      await this.cacheManager.del(cacheKey);
     }
 
+    // Thử primary API key trước
     let result = await this.tryApiCall(
       address,
       contractAddress,
@@ -91,11 +101,12 @@ export class EtherscanService {
     );
 
     if (result) {
-      await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000); // Cache with 25 min TTL
+      // Lưu vào cache với TTL 25 phút (ít hơn cron 30 phút)
+      await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000);
       return result;
     }
 
-    // If primary key fails and fallback key exists, try fallback
+    // Nếu primary key thất bại và có fallback key, thử fallback
     if (this.fallbackApiKey && this.currentApiKey !== this.fallbackApiKey) {
       this.logger.warn('Primary API key failed, trying fallback API key...');
       this.currentApiKey = this.fallbackApiKey;
@@ -108,14 +119,15 @@ export class EtherscanService {
 
       if (result) {
         this.logger.log('Fallback API key successful');
-        await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000); // Cache with 25 min TTL
+        // Lưu vào cache với TTL 25 phút
+        await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000);
         return result;
       }
     }
 
-    // Both API keys failed
+    // Cả hai API key đều thất bại
     this.logger.error('Both primary and fallback API keys failed');
-    // Send audit to Discord with latest error info
+    // Bắn audit lên Discord với thông tin lỗi gần nhất
     const lastPrimaryErr = this.apiKeyErrors.get(this.primaryApiKey) || 0;
     const lastFallbackErr = this.apiKeyErrors.get(this.fallbackApiKey) || 0;
     await this.discordWebhook.auditWebhook(
@@ -171,7 +183,7 @@ export class EtherscanService {
         this.httpService.get<EtherscanResponse>(url, { params }),
       );
 
-      // Send audit for all responses from Etherscan
+      // Bắn audit cho tất cả response từ Etherscan
       const isSuccess =
         response.data.status === '1' && response.data.message === 'OK';
 
@@ -192,9 +204,9 @@ export class EtherscanService {
 
       if (isSuccess) {
         const balance = response.data.result;
-        const balanceFormatted = this.formatTokenBalance(balance, 18); // USDT has 18 decimals
+        const balanceFormatted = this.formatTokenBalance(balance, 18); // USDT có 18 decimals
 
-        // Reset error count for this API key
+        // Reset error count cho API key này
         this.apiKeyErrors.delete(apiKey);
 
         return {
@@ -206,11 +218,11 @@ export class EtherscanService {
           decimals: 18,
         };
       } else {
-        // Increase error count for this API key
+        // Tăng error count cho API key này
         const errorCount = (this.apiKeyErrors.get(apiKey) || 0) + 1;
         this.apiKeyErrors.set(apiKey, errorCount);
 
-        // Check if it's a temporary API error (rate limit, maintenance)
+        // Kiểm tra nếu là lỗi API tạm thời (rate limit, maintenance)
         if (
           response.data.message.includes('temporarily unavailable') ||
           response.data.message.includes('rate limit') ||
@@ -227,7 +239,7 @@ export class EtherscanService {
         return null;
       }
     } catch (error) {
-      // Increase error count for this API key
+      // Tăng error count cho API key này
       const errorCount = (this.apiKeyErrors.get(apiKey) || 0) + 1;
       this.apiKeyErrors.set(apiKey, errorCount);
 
@@ -235,7 +247,7 @@ export class EtherscanService {
         `Error fetching token balance with API key ${apiKey.substring(0, 8)}... (Error count: ${errorCount}):`,
         error,
       );
-      // Send audit with exception details
+      // Gửi audit với exception chi tiết
       await this.discordWebhook.auditWebhook(
         'Exception calling Etherscan',
         'Unexpected exception occurred while calling Etherscan API',
@@ -323,5 +335,58 @@ export class EtherscanService {
         name: 'Unknown Token',
       }
     );
+  }
+
+  /**
+   * Clear tất cả cache balance
+   */
+  async clearAllBalanceCache(): Promise<void> {
+    try {
+      // Xóa cache bằng cách set với TTL = 0
+      await this.cacheManager.set('balance:clear', 'cleared', 0);
+      this.logger.log('Cleared all cache entries');
+    } catch (error) {
+      this.logger.error('Error clearing balance cache:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear cache cho một address cụ thể
+   */
+  async clearBalanceCache(
+    address: string,
+    contractAddress: string,
+    chainId: number = 56,
+  ): Promise<void> {
+    try {
+      const cacheKey = `balance:${address}:${contractAddress}:${chainId}`;
+      await this.cacheManager.del(cacheKey);
+      this.logger.log(`Cleared balance cache for ${address}`);
+    } catch (error) {
+      this.logger.error(`Error clearing balance cache for ${address}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thông tin API key status
+   */
+  getApiKeyStatus(): {
+    primaryKey: string;
+    fallbackKey: string;
+    primaryErrors: number;
+    fallbackErrors: number;
+  } {
+    return {
+      primaryKey: this.primaryApiKey
+        ? this.primaryApiKey.substring(0, 8) + '...'
+        : 'Not set',
+      fallbackKey: this.fallbackApiKey
+        ? this.fallbackApiKey.substring(0, 8) + '...'
+        : 'Not set',
+      primaryErrors: this.apiKeyErrors.get(this.primaryApiKey) || 0,
+      fallbackErrors: this.apiKeyErrors.get(this.fallbackApiKey) || 0,
+    };
   }
 }

@@ -13,6 +13,7 @@ import TelegramBot from 'node-telegram-bot-api';
 import { AuthService } from '../auth/auth.service';
 import { UserModel, UserDocument } from '../auth/auth.model';
 import { BuyCardControllerService } from '../balance-bsc/controllers/buy-card.controller';
+import { PartnerControllerService } from '../balance-bsc/controllers/partner.controller';
 import { MasterFundVinachainControllerService } from '../masterfund-vinachain/controllers/masterfund-vinachain.controller';
 import { MasterFundMonitoringService } from '../cron/services/master-fund-monitoring.service';
 import { MessageBuilder } from '@shared/message_builder';
@@ -46,6 +47,7 @@ export class BotService {
     private configService: ConfigService,
     private authService: AuthService,
     private buyCardControllerService: BuyCardControllerService,
+    private partnerControllerService: PartnerControllerService,
     private masterFundVinachainControllerService: MasterFundVinachainControllerService,
     @Inject(forwardRef(() => MasterFundMonitoringService))
     private masterFundMonitoringService: MasterFundMonitoringService,
@@ -178,6 +180,34 @@ export class BotService {
 
       case BotCommands.OFF_MONITOR_MASTER_FUND:
         await this.handleOffMonitorMasterFundCommand(chatId, userId);
+        break;
+
+      case BotCommands.SPAM:
+        await this.handleSpamCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.PARTNERS:
+        await this.handlePartnersCommand(chatId, userId);
+        break;
+
+      case BotCommands.ADD_PARTNER:
+        await this.handleAddPartnerCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.EDIT_PARTNER:
+        await this.handleEditPartnerCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.DELETE_PARTNER:
+        await this.handleDeletePartnerCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.CLEAR_CACHE:
+        await this.handleClearCacheCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.API_STATUS:
+        await this.handleApiStatusCommand(chatId, userId);
         break;
 
       default:
@@ -334,12 +364,20 @@ export class BotService {
     try {
       await this.sendMessage(chatId, getMessage(BotMessages.BUY_CARD_LOADING));
 
+      // Lấy thông tin user để xác định role
+      const user = await this.authService.findByTelegramId(userId);
+      const userRole = user?.role;
+
       const result =
-        await this.buyCardControllerService.handleViewBuyCardCommand();
+        await this.buyCardControllerService.handleViewBuyCardCommand(userRole);
 
       if (result.success) {
-        this.logger.log('Success: true', result.message);
-        await this.sendMessageWithKeyboard(chatId, result.message);
+        this.logger.log(`Keyboard: ${JSON.stringify(result.keyboard)}`);
+        await this.sendMessageWithKeyboard(
+          chatId,
+          result.message,
+          result.keyboard,
+        );
       } else {
         await this.sendMessage(chatId, result.message);
       }
@@ -352,7 +390,8 @@ export class BotService {
     }
   }
   /**
-   * Xử lý command /monitor_buy_card - Hiển thị inline keyboard để chọn ngưỡng
+   * Xử lý command /monitor_buy_card - Đặt lịch nhắc kiểm tra balance
+   * Hiển thị inline keyboard để chọn ngưỡng
    */
   private async handleMonitorBuyCardCommand(
     chatId: number,
@@ -369,11 +408,11 @@ export class BotService {
         return;
       }
 
-      const message = `🔔 *Set Alert Threshold When*
+      const message = `🔔 *Set alert threshold when*
 
 Choose alert threshold for Buy Card Fund:
 
-Bot will send notifications when Buy Card Fund balance drops below the selected threshold\\.`;
+Bot will send notification when Buy Card Fund balance drops below selected threshold\\.`;
 
       await this.sendMessageWithKeyboard(
         chatId,
@@ -418,12 +457,12 @@ Bot will send notifications when Buy Card Fund balance drops below the selected 
         );
 
       if (result.success) {
-        this.logger.log('Success: true', result.message);
-        // Edit loading message với kết quả
+        // Edit loading message với kết quả và keyboard
         await this.bot.editMessageText(result.message, {
           chat_id: chatId,
           message_id: loadingMsg.message_id,
           parse_mode: 'MarkdownV2',
+          reply_markup: result.keyboard,
         });
       } else {
         await this.sendMessage(chatId, result.message);
@@ -452,11 +491,11 @@ Bot will send notifications when Buy Card Fund balance drops below the selected 
         return;
       }
 
-      const message = `🔔 *Set Alert Threshold When*
+      const message = `🔔 *Set alert threshold when*
 
 Choose alert threshold for Master Fund:
 
-Bot will send notifications when Master Fund balance drops below the selected threshold\\.`;
+Bot will send notification when Master Fund balance drops below selected threshold\\.`;
 
       await this.sendMessageWithKeyboard(
         chatId,
@@ -470,16 +509,16 @@ Bot will send notifications when Master Fund balance drops below the selected th
   }
 
   private getMasterFundMonitorHelpMessage(): string {
-    return `**Set Master Fund Monitoring Reminder**
+    return `**Đặt nhắc nhở kiểm tra số dư Master Fund**
 
-**Syntax:** \`/monitor_master_fund\`
+**Cú pháp:** \`/monitor_master_fund\`
 
-Use this command to choose alert threshold from menu or enter custom number.
+Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nhập số tùy chỉnh.
 
-**Operation:**
-• Bot checks balance at selected frequency (10, 15, or 30 minutes)
-• Send notifications when balance < set threshold
-• Uses Redis cache for performance optimization`;
+**Hoạt động:**
+• Bot kiểm tra số dư theo tần suất đã chọn (10, 15, hoặc 30 phút)
+• Gửi thông báo khi số dư < ngưỡng đã đặt
+• Sử dụng Redis cache để tối ưu hiệu suất`;
   }
 
   /**
@@ -499,12 +538,18 @@ Use this command to choose alert threshold from menu or enter custom number.
         return;
       }
 
+      // Gọi service để tắt reminder
       const result = await this.buyCardControllerService.setReminder(
         userId,
         0,
         30,
       );
-      await this.sendMessage(chatId, result.message);
+
+      if (result.success) {
+        await this.sendMessage(chatId, result.message);
+      } else {
+        await this.sendMessage(chatId, result.message);
+      }
     } catch (error) {
       this.logger.error('Error in handleOffMonitorBuyCardCommand:', error);
       await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
@@ -528,19 +573,69 @@ Use this command to choose alert threshold from menu or enter custom number.
         return;
       }
 
+      // Gọi service để tắt reminder Master Fund
       const success =
         await this.masterFundMonitoringService.addMasterFundReminder(
           userId,
           0,
           15,
         );
-      const message = success
-        ? '✅ Master Fund monitoring reminder disabled successfully!'
-        : '❌ No Master Fund reminder found to disable!';
 
-      await this.sendMessage(chatId, message);
+      if (success) {
+        await this.sendMessage(
+          chatId,
+          '✅ Master Fund monitoring reminder disabled successfully!',
+        );
+      } else {
+        await this.sendMessage(
+          chatId,
+          '❌ No Master Fund monitoring reminder found to disable!',
+        );
+      }
     } catch (error) {
       this.logger.error('Error in handleOffMonitorMasterFundCommand:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  private async handleThresholdSelection(
+    chatId: number,
+    userId: number,
+    threshold: number,
+  ): Promise<void> {
+    try {
+      const result = await this.buyCardControllerService.setReminder(
+        userId,
+        threshold,
+        30,
+      );
+      await this.sendMessage(chatId, result.message);
+    } catch (error) {
+      this.logger.error('Error in handleThresholdSelection:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  private async handleCustomThresholdRequest(
+    chatId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      await this.cacheManager.set(
+        `waiting_threshold:${userId}`,
+        true,
+        CACHE_TIMEOUT,
+      );
+      await this.sendMessage(
+        chatId,
+        `*Enter custom threshold*
+
+Please enter USDT amount for alert threshold \\(example: 1500\\)
+
+Bot will send notification when Buy Card Fund balance drops below this threshold\\.`,
+      );
+    } catch (error) {
+      this.logger.error('Error in handleCustomThresholdRequest:', error);
       await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
     }
   }
@@ -561,6 +656,9 @@ Use this command to choose alert threshold from menu or enter custom number.
     const isWaitingMasterThreshold = await this.cacheManager.get<boolean>(
       `waiting_master_threshold:${userId}`,
     );
+    const isAddingPartner = await this.cacheManager.get<any>(
+      `adding_partner:${userId}`,
+    );
 
     if (isWaitingThreshold) {
       await this.handleCustomThresholdInput(msg.chat.id, userId, text);
@@ -572,9 +670,175 @@ Use this command to choose alert threshold from menu or enter custom number.
       return;
     }
 
+    if (isAddingPartner) {
+      await this.handlePartnerCreationStep(
+        msg.chat.id,
+        userId,
+        text,
+        isAddingPartner,
+      );
+      return;
+    }
+
     // Xử lý message thường
     const response = getRegularMessageResponse(text);
     await this.sendMessage(msg.chat.id, response);
+  }
+
+  private async handleCustomThresholdInput(
+    chatId: number,
+    userId: number,
+    input: string,
+  ): Promise<void> {
+    try {
+      await this.cacheManager.del(`waiting_threshold:${userId}`);
+      const threshold = this.parseThresholdInput(input);
+
+      const validationError = this.validateThreshold(threshold);
+      if (validationError) {
+        await this.sendMessage(chatId, validationError);
+        return;
+      }
+
+      const result = await this.buyCardControllerService.setReminder(
+        userId,
+        threshold,
+        30,
+      );
+      await this.sendMessage(chatId, result.message);
+    } catch (error) {
+      this.logger.error('Error in handleCustomThresholdInput:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  private async handleMasterThresholdSelection(
+    chatId: number,
+    userId: number,
+    threshold: number,
+  ): Promise<void> {
+    try {
+      await this.cacheManager.set(
+        `master_threshold:${userId}`,
+        threshold,
+        CACHE_TIMEOUT,
+      );
+      const message = `*Choose check interval*
+
+Threshold: ${threshold} USDT
+
+Choose check frequency:`;
+
+      await this.sendMessageWithKeyboard(
+        chatId,
+        message,
+        this.createIntervalKeyboard(),
+      );
+    } catch (error) {
+      this.logger.error('Error in handleMasterThresholdSelection:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  private async handleMasterCustomThresholdRequest(
+    chatId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      await this.cacheManager.set(
+        `waiting_master_threshold:${userId}`,
+        true,
+        CACHE_TIMEOUT,
+      );
+      await this.sendMessage(
+        chatId,
+        `*Enter custom threshold for Master Fund*
+
+Please enter USDT amount for alert threshold \\(example: 2000\\)
+
+Bot will send notification when Master Fund balance drops below this threshold\\.`,
+      );
+    } catch (error) {
+      this.logger.error('Error in handleMasterCustomThresholdRequest:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  private async handleMasterIntervalSelection(
+    chatId: number,
+    userId: number,
+    intervalMinutes: number,
+  ): Promise<void> {
+    try {
+      const threshold = await this.cacheManager.get<number>(
+        `master_threshold:${userId}`,
+      );
+
+      if (!threshold) {
+        await this.sendMessage(chatId, '❌ Timeout. Please start again.');
+        return;
+      }
+
+      await this.cacheManager.del(`master_threshold:${userId}`);
+      const success =
+        await this.masterFundMonitoringService.addMasterFundReminder(
+          userId,
+          threshold,
+          intervalMinutes,
+        );
+
+      const message = success
+        ? `**✅ Master Fund monitoring reminder set successfully!**
+
+**Alert Threshold:** ${threshold} USDT
+**Check Interval:** ${intervalMinutes} minutes
+**Status:** Active
+
+Bot will automatically check Master Fund balance and send alert when balance < ${threshold} USDT\\.`
+        : '❌ Error occurred while setting Master Fund monitoring reminder!';
+
+      await this.sendMessage(chatId, message);
+    } catch (error) {
+      this.logger.error('Error in handleMasterIntervalSelection:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  private async handleMasterCustomThresholdInput(
+    chatId: number,
+    userId: number,
+    input: string,
+  ): Promise<void> {
+    try {
+      await this.cacheManager.del(`waiting_master_threshold:${userId}`);
+      const threshold = this.parseThresholdInput(input);
+
+      const validationError = this.validateThreshold(threshold);
+      if (validationError) {
+        await this.sendMessage(chatId, validationError.replace('1500', '2000'));
+        return;
+      }
+
+      await this.cacheManager.set(
+        `master_threshold:${userId}`,
+        threshold,
+        CACHE_TIMEOUT,
+      );
+      const message = `*Choose check interval*
+
+Threshold: ${threshold} USDT
+
+Choose check frequency:`;
+
+      await this.sendMessageWithKeyboard(
+        chatId,
+        message,
+        this.createIntervalKeyboard(),
+      );
+    } catch (error) {
+      this.logger.error('Error in handleMasterCustomThresholdInput:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
   }
 
   /**
@@ -612,9 +876,10 @@ Use this command to choose alert threshold from menu or enter custom number.
           break;
         case 'threshold_cancel':
           await this.bot.answerCallbackQuery(callbackQuery.id, {
-            text: 'Alert setup cancelled',
+            text: 'Setup cancelled',
             show_alert: false,
           });
+          // Gửi lại lệnh help
           await this.handleHelpCommand(chatId, userId);
           break;
         case 'master_threshold_500':
@@ -631,9 +896,10 @@ Use this command to choose alert threshold from menu or enter custom number.
           break;
         case 'master_threshold_cancel':
           await this.bot.answerCallbackQuery(callbackQuery.id, {
-            text: 'Alert setup cancelled',
+            text: 'Setup cancelled',
             show_alert: false,
           });
+          // Gửi lại lệnh help
           await this.handleHelpCommand(chatId, userId);
           break;
         case 'master_interval_10':
@@ -646,10 +912,21 @@ Use this command to choose alert threshold from menu or enter custom number.
           await this.handleMasterIntervalSelection(chatId, userId, 30);
           break;
         default:
-          await this.bot.answerCallbackQuery(callbackQuery.id, {
-            text: getMessage(BotMessages.CALLBACK_FEATURE_DEVELOPING),
-            show_alert: true,
-          });
+          // Xử lý callback cho partner selection
+          if (data?.startsWith('view_partner_')) {
+            const partnerName = data.replace('view_partner_', '');
+            await this.handleViewPartnerCallback(
+              chatId,
+              userId,
+              partnerName,
+              callbackQuery.id,
+            );
+          } else {
+            await this.bot.answerCallbackQuery(callbackQuery.id, {
+              text: getMessage(BotMessages.CALLBACK_FEATURE_DEVELOPING),
+              show_alert: true,
+            });
+          }
       }
 
       // Xác nhận đã xử lý callback
@@ -691,6 +968,8 @@ Use this command to choose alert threshold from menu or enter custom number.
         `Error sending message with keyboard to ${chatId}:`,
         error,
       );
+
+      // Log audit cho lỗi gửi message
       await this.discordWebhookService.auditWebhook(
         'Bot Error: Send Message with Keyboard',
         `Failed to send message with keyboard to user ${chatId}`,
@@ -727,7 +1006,7 @@ Use this command to choose alert threshold from menu or enter custom number.
           { text: '1000 USDT', callback_data: 'threshold_1000' },
           { text: 'Other', callback_data: 'threshold_custom' },
         ],
-        [{ text: '❌ Cancel Setup', callback_data: 'threshold_cancel' }],
+        [{ text: '❌ Cancel setup', callback_data: 'threshold_cancel' }],
       ],
     };
   }
@@ -745,7 +1024,7 @@ Use this command to choose alert threshold from menu or enter custom number.
         ],
         [
           {
-            text: '❌ Cancel Setup',
+            text: '❌ Cancel setup',
             callback_data: 'master_threshold_cancel',
           },
         ],
@@ -768,7 +1047,7 @@ Use this command to choose alert threshold from menu or enter custom number.
   // Helper methods for validation
   private validateThreshold(threshold: number): string | null {
     if (isNaN(threshold) || threshold <= 0) {
-      return '❌ Invalid number! Please enter a positive number \\(e\\.g\\.: 1500\\)';
+      return '❌ Invalid number! Please enter a positive number \\(example: 1500\\)';
     }
     if (threshold > MAX_THRESHOLD) {
       return '❌ Threshold too large! Please enter a number less than 1,000,000 USDT';
@@ -780,205 +1059,570 @@ Use this command to choose alert threshold from menu or enter custom number.
     return parseFloat(input.replace(/[^\d.]/g, ''));
   }
 
-  // Threshold handlers
-  private async handleThresholdSelection(
+  /**
+   * Handle /spam command - Spam call API Buy Card (Dev only)
+   */
+  private async handleSpamCommand(
     chatId: number,
     userId: number,
-    threshold: number,
+    messageText?: string,
   ): Promise<void> {
     try {
-      const result = await this.buyCardControllerService.setReminder(
-        userId,
-        threshold,
-        30,
-      );
-      await this.sendMessage(chatId, result.message);
-    } catch (error) {
-      this.logger.error('Error in handleThresholdSelection:', error);
-      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
-    }
-  }
-
-  private async handleCustomThresholdRequest(
-    chatId: number,
-    userId: number,
-  ): Promise<void> {
-    try {
-      await this.cacheManager.set(
-        `waiting_threshold:${userId}`,
-        true,
-        CACHE_TIMEOUT,
-      );
-      await this.sendMessage(
-        chatId,
-        `*Enter Custom Threshold*
-
-Please enter USDT amount for alert threshold \\(e\\.g\\.: 1500\\)
-
-Bot will send notifications when Buy Card Fund balance drops below this threshold\\.`,
-      );
-    } catch (error) {
-      this.logger.error('Error in handleCustomThresholdRequest:', error);
-      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
-    }
-  }
-
-  private async handleCustomThresholdInput(
-    chatId: number,
-    userId: number,
-    input: string,
-  ): Promise<void> {
-    try {
-      await this.cacheManager.del(`waiting_threshold:${userId}`);
-      const threshold = this.parseThresholdInput(input);
-
-      const validationError = this.validateThreshold(threshold);
-      if (validationError) {
-        await this.sendMessage(chatId, validationError);
-        return;
-      }
-
-      const result = await this.buyCardControllerService.setReminder(
-        userId,
-        threshold,
-        30,
-      );
-      await this.sendMessage(chatId, result.message);
-    } catch (error) {
-      this.logger.error('Error in handleCustomThresholdInput:', error);
-      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
-    }
-  }
-
-  private async handleMasterThresholdSelection(
-    chatId: number,
-    userId: number,
-    threshold: number,
-  ): Promise<void> {
-    try {
-      await this.cacheManager.set(
-        `master_threshold:${userId}`,
-        threshold,
-        CACHE_TIMEOUT,
-      );
-      const message = `*Choose Check Interval*
-
-Threshold: ${threshold} USDT
-
-Select check frequency:`;
-
-      await this.sendMessageWithKeyboard(
-        chatId,
-        message,
-        this.createIntervalKeyboard(),
-      );
-    } catch (error) {
-      this.logger.error('Error in handleMasterThresholdSelection:', error);
-      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
-    }
-  }
-
-  private async handleMasterCustomThresholdRequest(
-    chatId: number,
-    userId: number,
-  ): Promise<void> {
-    try {
-      await this.cacheManager.set(
-        `waiting_master_threshold:${userId}`,
-        true,
-        CACHE_TIMEOUT,
-      );
-      await this.sendMessage(
-        chatId,
-        `*Enter Custom Threshold for Master Fund*
-
-Please enter USDT amount for alert threshold \\(e\\.g\\.: 2000\\)
-
-Bot will send notifications when Master Fund balance drops below this threshold\\.`,
-      );
-    } catch (error) {
-      this.logger.error('Error in handleMasterCustomThresholdRequest:', error);
-      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
-    }
-  }
-
-  private async handleMasterIntervalSelection(
-    chatId: number,
-    userId: number,
-    intervalMinutes: number,
-  ): Promise<void> {
-    try {
-      const threshold = await this.cacheManager.get<number>(
-        `master_threshold:${userId}`,
-      );
-
-      if (!threshold) {
+      // Check if user is DEV
+      const user = await this.authService.findByTelegramId(userId);
+      if (!user || user.role !== UserRole.DEV) {
         await this.sendMessage(
           chatId,
-          '❌ Timeout expired. Please start again.',
+          '❌ Only Developers can use this command!',
         );
         return;
       }
 
-      await this.cacheManager.del(`master_threshold:${userId}`);
-      const success =
-        await this.masterFundMonitoringService.addMasterFundReminder(
-          userId,
-          threshold,
-          intervalMinutes,
+      // Parse spam parameters
+      const args = messageText?.split(' ').slice(1) || [];
+      const count = parseInt(args[0]) || 10; // Default 10 calls
+      const delay = parseInt(args[1]) || 1000; // Default 1 second delay
+
+      if (count > 100) {
+        await this.sendMessage(chatId, '❌ Spam count cannot exceed 100!');
+        return;
+      }
+
+      if (delay < 100) {
+        await this.sendMessage(chatId, '❌ Delay cannot be less than 100ms!');
+        return;
+      }
+
+      await this.sendMessage(
+        chatId,
+        `🚀 Starting Buy Card API spam...\n` +
+          `📊 Count: ${count}\n` +
+          `⏱️ Delay: ${delay}ms\n` +
+          `⏰ Started at: ${new Date().toLocaleString('en-US')}`,
+      );
+
+      let successCount = 0;
+      let errorCount = 0;
+      const startTime = Date.now();
+
+      // Spam API calls
+      for (let i = 1; i <= count; i++) {
+        try {
+          const result =
+            await this.buyCardControllerService.handleViewBuyCardCommand();
+
+          if (result.success) {
+            successCount++;
+            this.logger.log(`Spam call ${i}/${count}: Success`);
+          } else {
+            errorCount++;
+            this.logger.warn(
+              `Spam call ${i}/${count}: Failed - ${result.message}`,
+            );
+          }
+        } catch (error) {
+          errorCount++;
+          this.logger.error(
+            `Spam call ${i}/${count}: Error - ${error.message}`,
+          );
+        }
+
+        // Delay between calls
+        if (i < count) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
+      const endTime = Date.now();
+      const totalTime = endTime - startTime;
+
+      // Send results
+      const resultMessage =
+        `✅ Spam completed!\n\n` +
+        `📊 Results:\n` +
+        `   • Success: ${successCount}/${count}\n` +
+        `   • Errors: ${errorCount}/${count}\n` +
+        `   • Success rate: ${((successCount / count) * 100).toFixed(1)}%\n\n` +
+        `⏱️ Time:\n` +
+        `   • Total time: ${(totalTime / 1000).toFixed(2)}s\n` +
+        `   • Average time/call: ${(totalTime / count).toFixed(0)}ms\n` +
+        `   • Delay between calls: ${delay}ms\n\n` +
+        `⏰ Ended at: ${new Date().toLocaleString('en-US')}`;
+
+      await this.sendMessage(chatId, resultMessage);
+    } catch (error) {
+      this.logger.error('Error in handleSpamCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Error occurred while executing spam command!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /partners
+   */
+  private async handlePartnersCommand(
+    chatId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const result =
+        await this.partnerControllerService.handlePartnersCommand();
+
+      if (result.success) {
+        await this.sendMessageWithKeyboard(
+          chatId,
+          result.message,
+          result.keyboard,
+        );
+      } else {
+        await this.sendMessage(chatId, result.message);
+      }
+    } catch (error) {
+      this.logger.error('Error in handlePartnersCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Error occurred while processing partners command!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /add_partner - Bắt đầu flow tạo partner từng bước
+   */
+  private async handleAddPartnerCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      // Bắt đầu flow tạo partner từng bước
+      await this.cacheManager.set(
+        `adding_partner:${userId}`,
+        { step: 'name' },
+        CACHE_TIMEOUT,
+      );
+
+      await this.sendMessage(
+        chatId,
+        '🆕 **Add New Partner**\n\n' +
+          '**Step 1/3: Enter partner ID name**\n\n' +
+          'Please enter ID name for partner \\(no spaces, only letters, numbers and underscores\\)\n\n' +
+          '**Examples:** `partner_a`, `vinachain_v2`, `new_partner`\n\n' +
+          '💡 This name will be used as unique ID for partner\\.',
+      );
+    } catch (error) {
+      this.logger.error('Error in handleAddPartnerCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Error occurred while starting partner creation!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /edit_partner
+   */
+  private async handleEditPartnerCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const result =
+        await this.partnerControllerService.handleEditPartnerCommand(
+          messageText,
+        );
+      await this.sendMessage(chatId, result.message);
+    } catch (error) {
+      this.logger.error('Error in handleEditPartnerCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Error occurred while editing partner!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /delete_partner
+   */
+  private async handleDeletePartnerCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const result =
+        await this.partnerControllerService.handleDeletePartnerCommand(
+          messageText,
+        );
+      await this.sendMessage(chatId, result.message);
+    } catch (error) {
+      this.logger.error('Error in handleDeletePartnerCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Error occurred while deleting partner!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /clear_cache
+   */
+  private async handleClearCacheCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const args = messageText?.split(' ').slice(1) || [];
+
+      if (args.length === 0) {
+        // Clear tất cả cache
+        await this.buyCardControllerService.clearAllBalanceCache();
+        await this.sendMessage(
+          chatId,
+          '✅ **All balance cache cleared successfully!**\n\nCache will be refreshed on next request.',
+        );
+      } else if (args.length === 1) {
+        // Clear cache cho một partner cụ thể
+        const partnerName = args[0];
+        const partner =
+          await this.partnerControllerService.getPartnerByName(partnerName);
+
+        if (!partner) {
+          await this.sendMessage(
+            chatId,
+            `❌ Partner with name "${partnerName}" not found!`,
+          );
+          return;
+        }
+
+        await this.buyCardControllerService.clearBalanceCache(
+          partner.walletAddress,
+          partner.contractAddress,
+          partner.chainId,
         );
 
-      const message = success
-        ? `**✅ Master Fund reminder set successfully!**
+        await this.sendMessage(
+          chatId,
+          `✅ **Cache cleared for partner "${partner.displayName}" successfully!**\n\nCache will be refreshed on next request.`,
+        );
+      } else {
+        await this.sendMessage(
+          chatId,
+          '**Usage:**\n\n' +
+            '• `/clear_cache` - Clear all cache\n' +
+            '• `/clear_cache <partner_name>` - Clear cache for specific partner\n\n' +
+            '**Examples:**\n' +
+            '• `/clear_cache`\n' +
+            '• `/clear_cache vinachain`',
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error in handleClearCacheCommand:', error);
+      await this.sendMessage(chatId, '❌ Error occurred while clearing cache!');
+    }
+  }
 
-**Alert Threshold:** ${threshold} USDT
-**Check Interval:** ${intervalMinutes} minutes
-**Status:** Active
+  /**
+   * Xử lý lệnh /api_status
+   */
+  private async handleApiStatusCommand(
+    chatId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
 
-Bot will automatically check Master Fund balance and send alerts when balance < ${threshold} USDT\\.`
-        : '❌ Error occurred while setting Master Fund reminder!';
+      const apiStatus = await this.buyCardControllerService.getApiKeyStatus();
+
+      const message =
+        '📊 **API Keys Status**\n\n' +
+        `**Primary Key:** \`${apiStatus.primaryKey}\`\n` +
+        `**Fallback Key:** \`${apiStatus.fallbackKey}\`\n\n` +
+        `**Error Count:**\n` +
+        `• Primary: ${apiStatus.primaryErrors}\n` +
+        `• Fallback: ${apiStatus.fallbackErrors}\n\n` +
+        `**Status:** ${apiStatus.primaryErrors > 0 || apiStatus.fallbackErrors > 0 ? '⚠️ Has errors' : '✅ Working normally'}`;
 
       await this.sendMessage(chatId, message);
     } catch (error) {
-      this.logger.error('Error in handleMasterIntervalSelection:', error);
-      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+      this.logger.error('Error in handleApiStatusCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Error occurred while getting API status!',
+      );
     }
   }
 
-  private async handleMasterCustomThresholdInput(
+  /**
+   * Xử lý callback khi user chọn partner để xem balance
+   */
+  private async handleViewPartnerCallback(
+    chatId: number,
+    userId: number,
+    partnerName: string,
+    callbackQueryId: string,
+  ): Promise<void> {
+    try {
+      // Lấy thông tin user role
+      const user = await this.authService.findByTelegramId(userId);
+      const userRole = user?.role;
+
+      // Gọi controller để xử lý
+      const result =
+        await this.buyCardControllerService.handleViewBuyCardForPartner(
+          partnerName,
+          userRole,
+        );
+
+      if (result.success) {
+        await this.bot.answerCallbackQuery(callbackQueryId, {
+          text: 'Balance information loaded',
+          show_alert: false,
+        });
+
+        this.logger.log(
+          `Partner callback keyboard: ${JSON.stringify(result.keyboard)}`,
+        );
+        await this.sendMessageWithKeyboard(
+          chatId,
+          result.message,
+          result.keyboard,
+        );
+      } else {
+        await this.bot.answerCallbackQuery(callbackQueryId, {
+          text: result.message,
+          show_alert: true,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Error in handleViewPartnerCallback:', error);
+      await this.bot.answerCallbackQuery(callbackQueryId, {
+        text: 'Error occurred while viewing balance',
+        show_alert: true,
+      });
+    }
+  }
+
+  /**
+   * Xử lý từng bước tạo partner
+   */
+  private async handlePartnerCreationStep(
     chatId: number,
     userId: number,
     input: string,
+    partnerData: any,
   ): Promise<void> {
     try {
-      await this.cacheManager.del(`waiting_master_threshold:${userId}`);
-      const threshold = this.parseThresholdInput(input);
+      const { step, name, displayName } = partnerData;
 
-      const validationError = this.validateThreshold(threshold);
-      if (validationError) {
-        await this.sendMessage(chatId, validationError.replace('1500', '2000'));
-        return;
+      switch (step) {
+        case 'name':
+          // Validate tên ID
+          if (!/^[a-zA-Z0-9_]+$/.test(input)) {
+            await this.sendMessage(
+              chatId,
+              '❌ **Invalid ID name!**\n\n' +
+                'ID name can only contain letters, numbers and underscores.\n' +
+                '**Examples:** `partner_a`, `vinachain_v2`\n\n' +
+                'Please enter again:',
+            );
+            return;
+          }
+
+          // Kiểm tra tên đã tồn tại chưa
+          const existingPartner =
+            await this.partnerControllerService.getPartnerByName(input);
+          if (existingPartner) {
+            await this.sendMessage(
+              chatId,
+              `❌ **ID name "${input}" already exists!**\n\n` +
+                'Please choose a different ID name:',
+            );
+            return;
+          }
+
+          // Chuyển sang bước 2
+          await this.cacheManager.set(
+            `adding_partner:${userId}`,
+            { step: 'displayName', name: input },
+            CACHE_TIMEOUT,
+          );
+
+          await this.sendMessage(
+            chatId,
+            '✅ **Step 1 completed\\!**\n\n' +
+              `**ID Name:** \`${input}\`\n\n` +
+              '**Step 2/3: Enter display name**\n\n' +
+              'Please enter display name for partner \\(can have spaces and special characters\\)\n\n' +
+              '**Examples:** `Partner A`, `Vinachain V2`, `New Partner`\n\n' +
+              '💡 This name will be displayed to users when selecting partner\\.',
+          );
+          break;
+
+        case 'displayName':
+          // Validate tên hiển thị
+          if (input.trim().length < 2) {
+            await this.sendMessage(
+              chatId,
+              '❌ **Display name too short!**\n\n' +
+                'Display name must have at least 2 characters.\n\n' +
+                'Please enter again:',
+            );
+            return;
+          }
+
+          // Chuyển sang bước 3
+          await this.cacheManager.set(
+            `adding_partner:${userId}`,
+            { step: 'walletAddress', name, displayName: input.trim() },
+            CACHE_TIMEOUT,
+          );
+
+          await this.sendMessage(
+            chatId,
+            '✅ **Step 2 completed\\!**\n\n' +
+              `**ID Name:** \`${name}\`\n` +
+              `**Display Name:** ${displayName}\n\n` +
+              '**Step 3/3: Enter wallet address**\n\n' +
+              'Please enter blockchain wallet address \\(starts with 0x\\)\n\n' +
+              '**Example:** `0x1234567890abcdef1234567890abcdef12345678`\n\n' +
+              '💡 This address will be used to check balance\\.',
+          );
+          break;
+
+        case 'walletAddress':
+          // Validate địa chỉ ví
+          if (!/^0x[a-fA-F0-9]{40}$/.test(input)) {
+            await this.sendMessage(
+              chatId,
+              '❌ **Invalid wallet address!**\n\n' +
+                'Wallet address must start with 0x and have 40 hex characters.\n' +
+                '**Example:** `0x1234567890abcdef1234567890abcdef12345678`\n\n' +
+                'Please enter again:',
+            );
+            return;
+          }
+
+          // Tạo partner
+          const result = await this.partnerControllerService.createPartner({
+            name,
+            displayName,
+            walletAddress: input,
+          });
+
+          // Xóa cache
+          await this.cacheManager.del(`adding_partner:${userId}`);
+
+          if (result.success) {
+            await this.sendMessage(
+              chatId,
+              '🎉 **Partner created successfully\\!**\n\n' +
+                `**ID Name:** \`${name}\`\n` +
+                `**Display Name:** ${displayName}\n` +
+                `**Wallet Address:** \`${input}\`\n` +
+                `**Token:** USDT \\(default\\)\n` +
+                `**Chain:** BSC \\(56\\)\n\n` +
+                '✅ Partner has been added to system and ready to use\\!',
+            );
+          } else {
+            await this.sendMessage(chatId, result.message);
+          }
+          break;
+
+        default:
+          await this.cacheManager.del(`adding_partner:${userId}`);
+          await this.sendMessage(
+            chatId,
+            '❌ Error occurred during partner creation process!',
+          );
       }
-
-      await this.cacheManager.set(
-        `master_threshold:${userId}`,
-        threshold,
-        CACHE_TIMEOUT,
-      );
-      const message = `*Choose Check Interval*
-
-Threshold: ${threshold} USDT
-
-Select check frequency:`;
-
-      await this.sendMessageWithKeyboard(
-        chatId,
-        message,
-        this.createIntervalKeyboard(),
-      );
     } catch (error) {
-      this.logger.error('Error in handleMasterCustomThresholdInput:', error);
-      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+      this.logger.error('Error in handlePartnerCreationStep:', error);
+      await this.cacheManager.del(`adding_partner:${userId}`);
+      await this.sendMessage(
+        chatId,
+        '❌ Error occurred while creating partner!',
+      );
     }
   }
 }

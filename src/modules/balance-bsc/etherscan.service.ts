@@ -74,16 +74,22 @@ export class EtherscanService {
     address: string,
     contractAddress: string,
     chainId: number = 56,
+    forceRefresh: boolean = false,
   ): Promise<TokenBalanceInfo | null> {
     // Tạo cache key
     const cacheKey = `balance:${address}:${contractAddress}:${chainId}`;
 
-    // Kiểm tra cache trước
-    const cachedBalance =
-      await this.cacheManager.get<TokenBalanceInfo>(cacheKey);
-    if (cachedBalance) {
-      this.logger.debug(`Using cached balance for ${address}`);
-      return cachedBalance;
+    // Kiểm tra cache trước (trừ khi force refresh)
+    if (!forceRefresh) {
+      const cachedBalance =
+        await this.cacheManager.get<TokenBalanceInfo>(cacheKey);
+      if (cachedBalance) {
+        this.logger.debug(`Using cached balance for ${address}`);
+        return cachedBalance;
+      }
+    } else {
+      this.logger.debug(`Force refresh: clearing cache for ${address}`);
+      await this.cacheManager.del(cacheKey);
     }
 
     // Thử primary API key trước
@@ -329,5 +335,58 @@ export class EtherscanService {
         name: 'Unknown Token',
       }
     );
+  }
+
+  /**
+   * Clear tất cả cache balance
+   */
+  async clearAllBalanceCache(): Promise<void> {
+    try {
+      // Xóa cache bằng cách set với TTL = 0
+      await this.cacheManager.set('balance:clear', 'cleared', 0);
+      this.logger.log('Cleared all cache entries');
+    } catch (error) {
+      this.logger.error('Error clearing balance cache:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear cache cho một address cụ thể
+   */
+  async clearBalanceCache(
+    address: string,
+    contractAddress: string,
+    chainId: number = 56,
+  ): Promise<void> {
+    try {
+      const cacheKey = `balance:${address}:${contractAddress}:${chainId}`;
+      await this.cacheManager.del(cacheKey);
+      this.logger.log(`Cleared balance cache for ${address}`);
+    } catch (error) {
+      this.logger.error(`Error clearing balance cache for ${address}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thông tin API key status
+   */
+  getApiKeyStatus(): {
+    primaryKey: string;
+    fallbackKey: string;
+    primaryErrors: number;
+    fallbackErrors: number;
+  } {
+    return {
+      primaryKey: this.primaryApiKey
+        ? this.primaryApiKey.substring(0, 8) + '...'
+        : 'Not set',
+      fallbackKey: this.fallbackApiKey
+        ? this.fallbackApiKey.substring(0, 8) + '...'
+        : 'Not set',
+      primaryErrors: this.apiKeyErrors.get(this.primaryApiKey) || 0,
+      fallbackErrors: this.apiKeyErrors.get(this.fallbackApiKey) || 0,
+    };
   }
 }

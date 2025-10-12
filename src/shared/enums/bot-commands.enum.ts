@@ -27,6 +27,12 @@ export enum BotCommands {
   ADMIN = '/admin',
   STATS = '/stats',
   USERS = '/users',
+  PARTNERS = '/partners',
+  ADD_PARTNER = '/add_partner',
+  EDIT_PARTNER = '/edit_partner',
+  DELETE_PARTNER = '/delete_partner',
+  CLEAR_CACHE = '/clear_cache',
+  API_STATUS = '/api_status',
 
   // ===========================================
   // DEV COMMANDS (Dev only)
@@ -55,6 +61,12 @@ export const COMMAND_DESCRIPTIONS: Record<BotCommands, string> = {
   [BotCommands.ADMIN]: 'Panel quản trị',
   [BotCommands.STATS]: 'Thống kê hệ thống',
   [BotCommands.USERS]: 'Quản lý users (đang phát triển)',
+  [BotCommands.PARTNERS]: 'Quản lý partners',
+  [BotCommands.ADD_PARTNER]: 'Thêm partner mới',
+  [BotCommands.EDIT_PARTNER]: 'Chỉnh sửa partner',
+  [BotCommands.DELETE_PARTNER]: 'Xóa partner',
+  [BotCommands.CLEAR_CACHE]: 'Xóa cache balance',
+  [BotCommands.API_STATUS]: 'Xem trạng thái API keys',
   [BotCommands.DEV]: 'Developer tools (đang phát triển)',
   [BotCommands.LOGS]: 'Xem system logs (đang phát triển)',
   [BotCommands.DEBUG]: 'Debug mode (đang phát triển)',
@@ -77,7 +89,17 @@ export const COMMANDS_BY_ROLE = {
     BotCommands.OFF_MONITOR_MASTER_FUND,
   ],
   ADVANCED: [BotCommands.ADVANCED],
-  ADMIN: [BotCommands.ADMIN, BotCommands.STATS, BotCommands.USERS],
+  ADMIN: [
+    BotCommands.ADMIN,
+    BotCommands.STATS,
+    BotCommands.USERS,
+    BotCommands.PARTNERS,
+    BotCommands.ADD_PARTNER,
+    BotCommands.EDIT_PARTNER,
+    BotCommands.DELETE_PARTNER,
+    BotCommands.CLEAR_CACHE,
+    BotCommands.API_STATUS,
+  ],
   DEV: [BotCommands.DEV, BotCommands.LOGS, BotCommands.DEBUG, BotCommands.SPAM],
 };
 
@@ -96,6 +118,12 @@ export const IMPLEMENTED_COMMANDS: Set<BotCommands> = new Set([
   BotCommands.MASTERFUND_VINACHAIN,
   BotCommands.MONITOR_MASTER_FUND,
   BotCommands.OFF_MONITOR_MASTER_FUND,
+  BotCommands.PARTNERS,
+  BotCommands.ADD_PARTNER,
+  BotCommands.EDIT_PARTNER,
+  BotCommands.DELETE_PARTNER,
+  BotCommands.CLEAR_CACHE,
+  BotCommands.API_STATUS,
   BotCommands.SPAM,
 ]);
 

@@ -150,7 +150,7 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   // ===========================================
   // BUY CARD MESSAGES
   // ===========================================
-  [BotMessages.BUY_CARD_LOADING]: `Đang kiểm tra số dư...`,
+  [BotMessages.BUY_CARD_LOADING]: `Đang kiểm tra số dư\\.\\.\\.`,
   [BotMessages.BUY_CARD_HEADER]: `Thông tin Quỹ Mua Thẻ\n\n`,
   [BotMessages.BUY_CARD_WALLET]: `Địa chỉ ví: `,
   [BotMessages.BUY_CARD_TOKEN]: `Token: `,
@@ -161,14 +161,14 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   // ===========================================
   // ERROR MESSAGES
   // ===========================================
-  [BotMessages.ERROR_GENERAL]: ` Có lỗi xảy ra, vui lòng thử lại sau.`,
-  [BotMessages.ERROR_USER_NOT_FOUND]: ` Không tìm thấy thông tin user.`,
-  [BotMessages.ERROR_NO_PERMISSION]: ` Bạn không có quyền truy cập tính năng này.`,
-  [BotMessages.ERROR_UNSUPPORTED_COMMAND]: ` Command không được hỗ trợ. Sử dụng /help để xem danh sách commands.`,
-  [BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD]: ` Lỗi cấu hình: Thiếu ADDRESS_BUY_CARD trong environment variables.`,
-  [BotMessages.ERROR_MISSING_CONTRACT_ADDRESS]: ` Lỗi cấu hình: Thiếu CONTRACT_ADDRESS_USDT trong environment variables.`,
-  [BotMessages.ERROR_BALANCE_FETCH_FAILED]: ` Không thể lấy thông tin balance. Vui lòng thử lại sau.`,
-  [BotMessages.ERROR_BALANCE_CHECK_FAILED]: ` Có lỗi xảy ra khi kiểm tra balance. Vui lòng thử lại sau.`,
+  [BotMessages.ERROR_GENERAL]: ` Có lỗi xảy ra, vui lòng thử lại sau\\.`,
+  [BotMessages.ERROR_USER_NOT_FOUND]: ` Không tìm thấy thông tin user\\.`,
+  [BotMessages.ERROR_NO_PERMISSION]: ` Bạn không có quyền truy cập tính năng này\\.`,
+  [BotMessages.ERROR_UNSUPPORTED_COMMAND]: ` Command không được hỗ trợ\\. Sử dụng /help để xem danh sách commands\\.`,
+  [BotMessages.ERROR_MISSING_ADDRESS_BUY_CARD]: ` Lỗi cấu hình: Thiếu ADDRESS_BUY_CARD trong environment variables\\.`,
+  [BotMessages.ERROR_MISSING_CONTRACT_ADDRESS]: ` Lỗi cấu hình: Thiếu CONTRACT_ADDRESS_USDT trong environment variables\\.`,
+  [BotMessages.ERROR_BALANCE_FETCH_FAILED]: ` Không thể lấy thông tin balance\\. Vui lòng thử lại sau\\.`,
+  [BotMessages.ERROR_BALANCE_CHECK_FAILED]: ` Có lỗi xảy ra khi kiểm tra balance\\. Vui lòng thử lại sau\\.`,
 
   // ===========================================
   // CALLBACK QUERY RESPONSES
@@ -187,5 +187,5 @@ export const getMessage = (messageKey: BotMessages): string => {
  * Helper function cho regular message response
  */
 export const getRegularMessageResponse = (text: string): string => {
-  return ` Bạn đã gửi: "${text}"\n\nSử dụng /help để xem danh sách commands có sẵn.`;
+  return ` Bạn đã gửi: "${text}"\n\nSử dụng /help để xem danh sách commands có sẵn\\.`;
 };

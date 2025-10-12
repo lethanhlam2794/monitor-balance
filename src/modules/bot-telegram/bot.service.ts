@@ -13,6 +13,7 @@ import TelegramBot from 'node-telegram-bot-api';
 import { AuthService } from '../auth/auth.service';
 import { UserModel, UserDocument } from '../auth/auth.model';
 import { BuyCardControllerService } from '../balance-bsc/controllers/buy-card.controller';
+import { PartnerControllerService } from '../balance-bsc/controllers/partner.controller';
 import { MasterFundVinachainControllerService } from '../masterfund-vinachain/controllers/masterfund-vinachain.controller';
 import { MasterFundMonitoringService } from '../cron/services/master-fund-monitoring.service';
 import { MessageBuilder } from '@shared/message_builder';
@@ -46,6 +47,7 @@ export class BotService {
     private configService: ConfigService,
     private authService: AuthService,
     private buyCardControllerService: BuyCardControllerService,
+    private partnerControllerService: PartnerControllerService,
     private masterFundVinachainControllerService: MasterFundVinachainControllerService,
     @Inject(forwardRef(() => MasterFundMonitoringService))
     private masterFundMonitoringService: MasterFundMonitoringService,
@@ -182,6 +184,30 @@ export class BotService {
 
       case BotCommands.SPAM:
         await this.handleSpamCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.PARTNERS:
+        await this.handlePartnersCommand(chatId, userId);
+        break;
+
+      case BotCommands.ADD_PARTNER:
+        await this.handleAddPartnerCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.EDIT_PARTNER:
+        await this.handleEditPartnerCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.DELETE_PARTNER:
+        await this.handleDeletePartnerCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.CLEAR_CACHE:
+        await this.handleClearCacheCommand(chatId, userId, msg.text);
+        break;
+
+      case BotCommands.API_STATUS:
+        await this.handleApiStatusCommand(chatId, userId);
         break;
 
       default:
@@ -346,6 +372,7 @@ export class BotService {
         await this.buyCardControllerService.handleViewBuyCardCommand(userRole);
 
       if (result.success) {
+        this.logger.log(`Keyboard: ${JSON.stringify(result.keyboard)}`);
         await this.sendMessageWithKeyboard(
           chatId,
           result.message,
@@ -629,6 +656,9 @@ Bot sẽ gửi thông báo khi số dư Buy Card Fund xuống dưới ngưỡng 
     const isWaitingMasterThreshold = await this.cacheManager.get<boolean>(
       `waiting_master_threshold:${userId}`,
     );
+    const isAddingPartner = await this.cacheManager.get<any>(
+      `adding_partner:${userId}`,
+    );
 
     if (isWaitingThreshold) {
       await this.handleCustomThresholdInput(msg.chat.id, userId, text);
@@ -637,6 +667,16 @@ Bot sẽ gửi thông báo khi số dư Buy Card Fund xuống dưới ngưỡng 
 
     if (isWaitingMasterThreshold) {
       await this.handleMasterCustomThresholdInput(msg.chat.id, userId, text);
+      return;
+    }
+
+    if (isAddingPartner) {
+      await this.handlePartnerCreationStep(
+        msg.chat.id,
+        userId,
+        text,
+        isAddingPartner,
+      );
       return;
     }
 
@@ -875,10 +915,21 @@ Chọn tần suất kiểm tra:`;
           await this.handleMasterIntervalSelection(chatId, userId, 30);
           break;
         default:
-          await this.bot.answerCallbackQuery(callbackQuery.id, {
-            text: getMessage(BotMessages.CALLBACK_FEATURE_DEVELOPING),
-            show_alert: true,
-          });
+          // Xử lý callback cho partner selection
+          if (data?.startsWith('view_partner_')) {
+            const partnerName = data.replace('view_partner_', '');
+            await this.handleViewPartnerCallback(
+              chatId,
+              userId,
+              partnerName,
+              callbackQuery.id,
+            );
+          } else {
+            await this.bot.answerCallbackQuery(callbackQuery.id, {
+              text: getMessage(BotMessages.CALLBACK_FEATURE_DEVELOPING),
+              show_alert: true,
+            });
+          }
       }
 
       // Xác nhận đã xử lý callback
@@ -1111,6 +1162,464 @@ Chọn tần suất kiểm tra:`;
         chatId,
         '❌ Có lỗi xảy ra khi thực hiện spam command!',
       );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /partners
+   */
+  private async handlePartnersCommand(
+    chatId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const result =
+        await this.partnerControllerService.handlePartnersCommand();
+
+      if (result.success) {
+        await this.sendMessageWithKeyboard(
+          chatId,
+          result.message,
+          result.keyboard,
+        );
+      } else {
+        await this.sendMessage(chatId, result.message);
+      }
+    } catch (error) {
+      this.logger.error('Error in handlePartnersCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Có lỗi xảy ra khi xử lý lệnh partners!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /add_partner - Bắt đầu flow tạo partner từng bước
+   */
+  private async handleAddPartnerCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      // Bắt đầu flow tạo partner từng bước
+      await this.cacheManager.set(
+        `adding_partner:${userId}`,
+        { step: 'name' },
+        CACHE_TIMEOUT,
+      );
+
+      await this.sendMessage(
+        chatId,
+        '🆕 **Thêm Partner Mới**\n\n' +
+          '**Bước 1/3: Nhập tên ID của partner**\n\n' +
+          'Vui lòng nhập tên ID cho partner \\(không có khoảng trắng, chỉ chữ cái, số và dấu gạch dưới\\)\n\n' +
+          '**Ví dụ:** `partner_a`, `vinachain_v2`, `new_partner`\n\n' +
+          '💡 Tên này sẽ được dùng làm ID duy nhất cho partner\\.',
+      );
+    } catch (error) {
+      this.logger.error('Error in handleAddPartnerCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Có lỗi xảy ra khi bắt đầu tạo partner!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý lệnh /edit_partner
+   */
+  private async handleEditPartnerCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const result =
+        await this.partnerControllerService.handleEditPartnerCommand(
+          messageText,
+        );
+      await this.sendMessage(chatId, result.message);
+    } catch (error) {
+      this.logger.error('Error in handleEditPartnerCommand:', error);
+      await this.sendMessage(chatId, '❌ Có lỗi xảy ra khi chỉnh sửa partner!');
+    }
+  }
+
+  /**
+   * Xử lý lệnh /delete_partner
+   */
+  private async handleDeletePartnerCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const result =
+        await this.partnerControllerService.handleDeletePartnerCommand(
+          messageText,
+        );
+      await this.sendMessage(chatId, result.message);
+    } catch (error) {
+      this.logger.error('Error in handleDeletePartnerCommand:', error);
+      await this.sendMessage(chatId, '❌ Có lỗi xảy ra khi xóa partner!');
+    }
+  }
+
+  /**
+   * Xử lý lệnh /clear_cache
+   */
+  private async handleClearCacheCommand(
+    chatId: number,
+    userId: number,
+    messageText?: string,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const args = messageText?.split(' ').slice(1) || [];
+
+      if (args.length === 0) {
+        // Clear tất cả cache
+        await this.buyCardControllerService.clearAllBalanceCache();
+        await this.sendMessage(
+          chatId,
+          '✅ **Đã xóa tất cả cache balance thành công!**\n\nCache sẽ được làm mới khi có request tiếp theo.',
+        );
+      } else if (args.length === 1) {
+        // Clear cache cho một partner cụ thể
+        const partnerName = args[0];
+        const partner =
+          await this.partnerControllerService.getPartnerByName(partnerName);
+
+        if (!partner) {
+          await this.sendMessage(
+            chatId,
+            `❌ Không tìm thấy partner với tên "${partnerName}"!`,
+          );
+          return;
+        }
+
+        await this.buyCardControllerService.clearBalanceCache(
+          partner.walletAddress,
+          partner.contractAddress,
+          partner.chainId,
+        );
+
+        await this.sendMessage(
+          chatId,
+          `✅ **Đã xóa cache cho partner "${partner.displayName}" thành công!**\n\nCache sẽ được làm mới khi có request tiếp theo.`,
+        );
+      } else {
+        await this.sendMessage(
+          chatId,
+          '**Cách sử dụng:**\n\n' +
+            '• `/clear_cache` - Xóa tất cả cache\n' +
+            '• `/clear_cache <partner_name>` - Xóa cache cho partner cụ thể\n\n' +
+            '**Ví dụ:**\n' +
+            '• `/clear_cache`\n' +
+            '• `/clear_cache vinachain`',
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error in handleClearCacheCommand:', error);
+      await this.sendMessage(chatId, '❌ Có lỗi xảy ra khi xóa cache!');
+    }
+  }
+
+  /**
+   * Xử lý lệnh /api_status
+   */
+  private async handleApiStatusCommand(
+    chatId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // Check admin permission
+      const hasAdmin = await this.authService.hasPermission(
+        userId,
+        UserRole.ADMIN,
+      );
+      if (!hasAdmin) {
+        await this.sendMessage(
+          chatId,
+          getMessage(BotMessages.ERROR_NO_PERMISSION),
+        );
+        return;
+      }
+
+      const apiStatus = await this.buyCardControllerService.getApiKeyStatus();
+
+      const message =
+        '📊 **Trạng thái API Keys**\n\n' +
+        `**Primary Key:** \`${apiStatus.primaryKey}\`\n` +
+        `**Fallback Key:** \`${apiStatus.fallbackKey}\`\n\n` +
+        `**Error Count:**\n` +
+        `• Primary: ${apiStatus.primaryErrors}\n` +
+        `• Fallback: ${apiStatus.fallbackErrors}\n\n` +
+        `**Trạng thái:** ${apiStatus.primaryErrors > 0 || apiStatus.fallbackErrors > 0 ? '⚠️ Có lỗi' : '✅ Hoạt động bình thường'}`;
+
+      await this.sendMessage(chatId, message);
+    } catch (error) {
+      this.logger.error('Error in handleApiStatusCommand:', error);
+      await this.sendMessage(
+        chatId,
+        '❌ Có lỗi xảy ra khi lấy trạng thái API!',
+      );
+    }
+  }
+
+  /**
+   * Xử lý callback khi user chọn partner để xem balance
+   */
+  private async handleViewPartnerCallback(
+    chatId: number,
+    userId: number,
+    partnerName: string,
+    callbackQueryId: string,
+  ): Promise<void> {
+    try {
+      // Lấy thông tin user role
+      const user = await this.authService.findByTelegramId(userId);
+      const userRole = user?.role;
+
+      // Gọi controller để xử lý
+      const result =
+        await this.buyCardControllerService.handleViewBuyCardForPartner(
+          partnerName,
+          userRole,
+        );
+
+      if (result.success) {
+        await this.bot.answerCallbackQuery(callbackQueryId, {
+          text: 'Đã tải thông tin balance',
+          show_alert: false,
+        });
+
+        this.logger.log(
+          `Partner callback keyboard: ${JSON.stringify(result.keyboard)}`,
+        );
+        await this.sendMessageWithKeyboard(
+          chatId,
+          result.message,
+          result.keyboard,
+        );
+      } else {
+        await this.bot.answerCallbackQuery(callbackQueryId, {
+          text: result.message,
+          show_alert: true,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Error in handleViewPartnerCallback:', error);
+      await this.bot.answerCallbackQuery(callbackQueryId, {
+        text: 'Có lỗi xảy ra khi xem balance',
+        show_alert: true,
+      });
+    }
+  }
+
+  /**
+   * Xử lý từng bước tạo partner
+   */
+  private async handlePartnerCreationStep(
+    chatId: number,
+    userId: number,
+    input: string,
+    partnerData: any,
+  ): Promise<void> {
+    try {
+      const { step, name, displayName } = partnerData;
+
+      switch (step) {
+        case 'name':
+          // Validate tên ID
+          if (!/^[a-zA-Z0-9_]+$/.test(input)) {
+            await this.sendMessage(
+              chatId,
+              '❌ **Tên ID không hợp lệ!**\n\n' +
+                'Tên ID chỉ được chứa chữ cái, số và dấu gạch dưới.\n' +
+                '**Ví dụ:** `partner_a`, `vinachain_v2`\n\n' +
+                'Vui lòng nhập lại:',
+            );
+            return;
+          }
+
+          // Kiểm tra tên đã tồn tại chưa
+          const existingPartner =
+            await this.partnerControllerService.getPartnerByName(input);
+          if (existingPartner) {
+            await this.sendMessage(
+              chatId,
+              `❌ **Tên ID "${input}" đã tồn tại!**\n\n` +
+                'Vui lòng chọn tên ID khác:',
+            );
+            return;
+          }
+
+          // Chuyển sang bước 2
+          await this.cacheManager.set(
+            `adding_partner:${userId}`,
+            { step: 'displayName', name: input },
+            CACHE_TIMEOUT,
+          );
+
+          await this.sendMessage(
+            chatId,
+            '✅ **Bước 1 hoàn thành\\!**\n\n' +
+              `**Tên ID:** \`${input}\`\n\n` +
+              '**Bước 2/3: Nhập tên hiển thị**\n\n' +
+              'Vui lòng nhập tên hiển thị cho partner \\(có thể có khoảng trắng và ký tự đặc biệt\\)\n\n' +
+              '**Ví dụ:** `Partner A`, `Vinachain V2`, `New Partner`\n\n' +
+              '💡 Tên này sẽ hiển thị cho user khi chọn partner\\.',
+          );
+          break;
+
+        case 'displayName':
+          // Validate tên hiển thị
+          if (input.trim().length < 2) {
+            await this.sendMessage(
+              chatId,
+              '❌ **Tên hiển thị quá ngắn!**\n\n' +
+                'Tên hiển thị phải có ít nhất 2 ký tự.\n\n' +
+                'Vui lòng nhập lại:',
+            );
+            return;
+          }
+
+          // Chuyển sang bước 3
+          await this.cacheManager.set(
+            `adding_partner:${userId}`,
+            { step: 'walletAddress', name, displayName: input.trim() },
+            CACHE_TIMEOUT,
+          );
+
+          await this.sendMessage(
+            chatId,
+            '✅ **Bước 2 hoàn thành\\!**\n\n' +
+              `**Tên ID:** \`${name}\`\n` +
+              `**Tên hiển thị:** ${displayName}\n\n` +
+              '**Bước 3/3: Nhập địa chỉ ví**\n\n' +
+              'Vui lòng nhập địa chỉ ví blockchain \\(bắt đầu với 0x\\)\n\n' +
+              '**Ví dụ:** `0x1234567890abcdef1234567890abcdef12345678`\n\n' +
+              '💡 Địa chỉ này sẽ được dùng để kiểm tra balance\\.',
+          );
+          break;
+
+        case 'walletAddress':
+          // Validate địa chỉ ví
+          if (!/^0x[a-fA-F0-9]{40}$/.test(input)) {
+            await this.sendMessage(
+              chatId,
+              '❌ **Địa chỉ ví không hợp lệ!**\n\n' +
+                'Địa chỉ ví phải bắt đầu với 0x và có 40 ký tự hex.\n' +
+                '**Ví dụ:** `0x1234567890abcdef1234567890abcdef12345678`\n\n' +
+                'Vui lòng nhập lại:',
+            );
+            return;
+          }
+
+          // Tạo partner
+          const result = await this.partnerControllerService.createPartner({
+            name,
+            displayName,
+            walletAddress: input,
+          });
+
+          // Xóa cache
+          await this.cacheManager.del(`adding_partner:${userId}`);
+
+          if (result.success) {
+            await this.sendMessage(
+              chatId,
+              '🎉 **Tạo partner thành công\\!**\n\n' +
+                `**Tên ID:** \`${name}\`\n` +
+                `**Tên hiển thị:** ${displayName}\n` +
+                `**Địa chỉ ví:** \`${input}\`\n` +
+                `**Token:** USDT \\(mặc định\\)\n` +
+                `**Chain:** BSC \\(56\\)\n\n` +
+                '✅ Partner đã được thêm vào hệ thống và sẵn sàng sử dụng\\!',
+            );
+          } else {
+            await this.sendMessage(chatId, result.message);
+          }
+          break;
+
+        default:
+          await this.cacheManager.del(`adding_partner:${userId}`);
+          await this.sendMessage(
+            chatId,
+            '❌ Có lỗi xảy ra trong quá trình tạo partner!',
+          );
+      }
+    } catch (error) {
+      this.logger.error('Error in handlePartnerCreationStep:', error);
+      await this.cacheManager.del(`adding_partner:${userId}`);
+      await this.sendMessage(chatId, '❌ Có lỗi xảy ra khi tạo partner!');
     }
   }
 }

@@ -1,48 +1,48 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Request } from 'express'; // Type cho Express request object
-import { stringUtils } from 'mvc-common-toolkit'; // Utility để mask dữ liệu nhạy cảm
-import { Observable, tap } from 'rxjs'; // RxJS để xử lý stream và side effects
+import { stringUtils } from 'mvc-common-toolkit'; // Utility to mask sensitive data
+import { Observable, tap } from 'rxjs'; // RxJS for handling streams and side effects
 
 import {
-  CallHandler, // Interface để xử lý request tiếp theo
-  ExecutionContext, // Context chứa thông tin về request hiện tại
-  Injectable, // Decorator để đánh dấu class có thể inject
-  Logger, // Logger của NestJS
+  CallHandler, // Interface for handling next request
+  ExecutionContext, // Context containing current request information
+  Injectable, // Decorator to mark class as injectable
+  Logger, // NestJS logger
   NestInterceptor, // Interface cho interceptor
 } from '@nestjs/common';
 
-import { getLogId } from '@shared/decorators/logging'; // Function để lấy log ID
+import { getLogId } from '@shared/decorators/logging'; // Function to get log ID
 
 @Injectable()
 export class HttpLoggingInterceptor implements NestInterceptor {
-  // Tạo logger instance với timestamp
+  // Create logger instance with timestamp
   private logger = new Logger(this.constructor.name, { timestamp: true });
 
   public intercept(
     context: ExecutionContext,
     next: CallHandler<any>,
   ): Observable<any> | Promise<Observable<any>> {
-    // Lấy Express request object từ context
+    // Get Express request object from context
     const request: Request = context.switchToHttp().getRequest();
-    // Lấy unique log ID cho request này (để track request qua các service)
+    // Get unique log ID for this request (to track request across services)
     const logId = getLogId(request);
 
-    // Xác định IP của user với fallback logic:
-    // 1. Thử lấy từ request.ip (direct connection)
-    // 2. Nếu không có, lấy từ header x-forwarded-for (qua proxy/load balancer)
-    // 3. Nếu vẫn không có, dùng 'unknown_ip'
+    // Determine user IP with fallback logic:
+    // 1. Try to get from request.ip (direct connection)
+    // 2. If not available, get from x-forwarded-for header (via proxy/load balancer)
+    // 3. If still not available, use 'unknown_ip'
     const userIp =
       request.ip ||
       (request.headers['x-forwarded-for'] as string)?.split(',').shift() ||
       'unknown_ip';
 
-    // Log thông tin request:
-    // - Log ID để track
-    // - IP của user
-    // - Email user (nếu đã authenticate)
+    // Log request information:
+    // - Log ID for tracking
+    // - User IP
+    // - User email (if authenticated)
     // - HTTP method (GET, POST, PUT, DELETE...)
     // - URL path
-    // - Request body (nếu có, mask dữ liệu nhạy cảm và giới hạn 100 ký tự)
+    // - Request body (if any, mask sensitive data and limit to 100 characters)
     this.logger.debug(
       `[${logId}]: IP:${userIp}: Request: ${(request as any).user?.email || ''} ${
         request.method
@@ -53,14 +53,14 @@ export class HttpLoggingInterceptor implements NestInterceptor {
       }`,
     );
 
-    // Xử lý request và log response
+    // Process request and log response
     return next.handle().pipe(
-      // tap() cho phép thực hiện side effect (logging) mà không thay đổi data stream
+      // tap() allows performing side effect (logging) without changing data stream
       tap((responseBody) => {
-        // Log thông tin response:
-        // - Cùng log ID để match với request
-        // - Cùng IP
-        // - Response body (mask dữ liệu nhạy cảm và giới hạn 100 ký tự)
+        // Log response information:
+        // - Same log ID to match with request
+        // - Same IP
+        // - Response body (mask sensitive data and limit to 100 characters)
         this.logger.debug(
           `[${logId}]: IP:${userIp}: Response: ${JSON.stringify(
             responseBody,

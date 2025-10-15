@@ -1,10 +1,10 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
 import { HttpModule } from '@nestjs/axios';
 
-// Import model, service và controller
+// Import model, service and controller
 import { BotService } from './bot.service';
 import { BotController } from './bot.controller';
 import { UserModel, userSchema } from '../auth/auth.model';
@@ -18,27 +18,27 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
 
 /**
  * Bot Telegram Module
- * Quản lý Telegram Bot functionality
+ * Manage Telegram Bot functionality
  */
 @Module({
   imports: [
-    // Import AuthModule để sử dụng AuthService
+    // Import AuthModule to use AuthService
     AuthModule,
-    // Import BalanceBscModule để sử dụng EtherscanService
+    // Import BalanceBscModule to use EtherscanService
     BalanceBscModule,
-    // Import MasterFundVinachainModule để sử dụng MasterFundVinachainControllerService
+    // Import MasterFundVinachainModule to use MasterFundVinachainControllerService
     MasterFundVinachainModule,
-    // Import CronModule để sử dụng MasterFundMonitoringService
+    // Import CronModule to use MasterFundMonitoringService
     forwardRef(() => CronModule),
-    // Import CacheModule để sử dụng Redis cache
+    // Import CacheModule to use Redis cache
     CacheModule.register(),
-    // Import HttpModule để sử dụng DiscordWebhookService
+    // Import HttpModule to use DiscordWebhookService
     HttpModule,
-    // Đăng ký UserModel với Mongoose
+    // Register UserModel with Mongoose
     MongooseModule.forFeature([{ name: UserModel.name, schema: userSchema }]),
   ],
   controllers: [BotController],
   providers: [BotService, DiscordWebhookService],
-  exports: [BotService], // Export để có thể sử dụng ở nơi khác
+  exports: [BotService], // Export to be used elsewhere
 })
 export class BotTelegramModule {}

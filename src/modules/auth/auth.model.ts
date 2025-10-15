@@ -1,4 +1,4 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -9,20 +9,20 @@ import { UserRole } from './enums/user-role.enum';
  * Mongoose Schema cho User
  */
 @Schema({ 
-  timestamps: true, // Tự động thêm createdAt và updatedAt
-  collection: 'users' // Tên collection trong MongoDB
+  timestamps: true, // Automatically add createdAt and updatedAt
+  collection: 'users' // Collection name in MongoDB
 })
 export class UserModel {
   @Prop({ 
     required: true, 
     unique: true,
-    index: true // Tạo index để tìm kiếm nhanh
+    index: true // Create index for fast search
   })
   telegramId: number;
 
   @Prop({ 
     type: String,
-    sparse: true, // Cho phép null và unique
+    sparse: true, // Allow null and unique
     index: true
   })
   username?: string;
@@ -70,12 +70,12 @@ export class UserModel {
 }
 
 /**
- * Tạo schema factory
+ * Create schema factory
  */
 export const userSchema = SchemaFactory.createForClass(UserModel);
 
 /**
- * Index compound để tối ưu queries
+ * Compound index to optimize queries
  */
 userSchema.index({ telegramId: 1, isActive: 1 });
 userSchema.index({ role: 1, isActive: 1 });

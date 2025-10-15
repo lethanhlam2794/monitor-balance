@@ -1,21 +1,21 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { IsNumber, IsString, IsOptional, IsObject } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
- * DTO cho việc gửi message qua Telegram
+ * DTO for sending message via Telegram
  */
 export class SendMessageDto {
   @ApiProperty({
-    description: 'ID của chat/group để gửi message',
+    description: 'Chat/group ID to send message',
     example: 123456789,
   })
   @IsNumber()
   chatId: number;
 
   @ApiProperty({
-    description: 'Nội dung message cần gửi',
-    example: 'Xin chào! Đây là message từ bot.',
+    description: 'Message content to send',
+    example: 'Hello! This is a message from the bot.',
   })
   @IsString()
   text: string;

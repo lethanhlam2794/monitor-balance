@@ -20,7 +20,7 @@ export class PartnerControllerService {
   constructor(private partnerService: PartnerService) {}
 
   /**
-   * Xử lý lệnh /partners - Hiển thị danh sách partners
+   * Handle /partners command - Show partners list
    */
   async handlePartnersCommand(): Promise<PartnerResponse> {
     try {
@@ -65,7 +65,7 @@ export class PartnerControllerService {
   }
 
   /**
-   * Xử lý lệnh /add_partner - Thêm partner mới
+   * Handle /add_partner command - Add new partner
    */
   async handleAddPartnerCommand(
     commandText?: string,
@@ -88,7 +88,7 @@ export class PartnerControllerService {
         return {
           success: false,
           message:
-            '❌ Thiếu thông tin bắt buộc! Sử dụng /add_partner <name> <display_name> <wallet_address>',
+            '❌ Missing required information! Use /add_partner <name> <display_name> <wallet_address>',
         };
       }
 
@@ -97,7 +97,7 @@ export class PartnerControllerService {
       if (existingPartner) {
         return {
           success: false,
-          message: `❌ Partner với tên "${escapeMarkdownV2(name)}" đã tồn tại!`,
+          message: `❌ Partner with name "${escapeMarkdownV2(name)}" already exists!`,
         };
       }
 
@@ -119,10 +119,10 @@ export class PartnerControllerService {
       return {
         success: true,
         message:
-          `✅ **Partner đã được thêm thành công!**\n\n` +
-          `**Tên:** ${escapeMarkdownV2(newPartner.displayName)}\n` +
+          `✅ **Partner added successfully!**\n\n` +
+          `**Name:** ${escapeMarkdownV2(newPartner.displayName)}\n` +
           `**ID:** \`${escapeMarkdownV2(newPartner.name)}\`\n` +
-          `**Địa chỉ:** \`${escapeMarkdownV2(newPartner.walletAddress)}\`\n` +
+          `**Address:** \`${escapeMarkdownV2(newPartner.walletAddress)}\`\n` +
           `**Token:** ${escapeMarkdownV2(newPartner.tokenSymbol)}\n` +
           `**Chain ID:** ${escapeMarkdownV2(newPartner.chainId.toString())}`,
       };
@@ -130,13 +130,13 @@ export class PartnerControllerService {
       this.logger.error('Error in handleAddPartnerCommand:', error);
       return {
         success: false,
-        message: '❌ Lỗi khi thêm partner!',
+        message: '❌ Error adding partner!',
       };
     }
   }
 
   /**
-   * Xử lý lệnh /edit_partner - Chỉnh sửa partner
+   * Handle /edit_partner command - Edit partner
    */
   async handleEditPartnerCommand(
     commandText?: string,
@@ -159,7 +159,7 @@ export class PartnerControllerService {
       if (!existingPartner) {
         return {
           success: false,
-          message: `❌ Không tìm thấy partner với tên "${escapeMarkdownV2(name)}"!`,
+          message: `❌ Partner with name "${escapeMarkdownV2(name)}" not found!`,
         };
       }
 
@@ -207,30 +207,30 @@ export class PartnerControllerService {
         return {
           success: true,
           message:
-            `✅ **Partner đã được cập nhật thành công!**\n\n` +
-            `**Tên:** ${escapeMarkdownV2(updatedPartner.displayName)}\n` +
+            `✅ **Partner updated successfully!**\n\n` +
+            `**Name:** ${escapeMarkdownV2(updatedPartner.displayName)}\n` +
             `**ID:** \`${escapeMarkdownV2(updatedPartner.name)}\`\n` +
-            `**Địa chỉ:** \`${escapeMarkdownV2(updatedPartner.walletAddress)}\`\n` +
+            `**Address:** \`${escapeMarkdownV2(updatedPartner.walletAddress)}\`\n` +
             `**Token:** ${escapeMarkdownV2(updatedPartner.tokenSymbol)}\n` +
             `**Chain ID:** ${escapeMarkdownV2(updatedPartner.chainId.toString())}`,
         };
       } else {
         return {
           success: false,
-          message: '❌ Không thể cập nhật partner!',
+          message: '❌ Cannot update partner!',
         };
       }
     } catch (error) {
       this.logger.error('Error in handleEditPartnerCommand:', error);
       return {
         success: false,
-        message: '❌ Lỗi khi chỉnh sửa partner!',
+        message: '❌ Error editing partner!',
       };
     }
   }
 
   /**
-   * Xử lý lệnh /delete_partner - Xóa partner
+   * Handle /delete_partner command - Delete partner
    */
   async handleDeletePartnerCommand(
     commandText?: string,
@@ -253,7 +253,7 @@ export class PartnerControllerService {
       if (!existingPartner) {
         return {
           success: false,
-          message: `❌ Không tìm thấy partner với tên "${escapeMarkdownV2(name)}"!`,
+          message: `❌ Partner with name "${escapeMarkdownV2(name)}" not found!`,
         };
       }
 
@@ -263,109 +263,109 @@ export class PartnerControllerService {
       if (success) {
         return {
           success: true,
-          message: `✅ **Partner "${escapeMarkdownV2(existingPartner.displayName)}" đã được xóa thành công!**`,
+          message: `✅ **Partner "${escapeMarkdownV2(existingPartner.displayName)}" deleted successfully!**`,
         };
       } else {
         return {
           success: false,
-          message: '❌ Không thể xóa partner!',
+          message: '❌ Cannot delete partner!',
         };
       }
     } catch (error) {
       this.logger.error('Error in handleDeletePartnerCommand:', error);
       return {
         success: false,
-        message: '❌ Lỗi khi xóa partner!',
+        message: '❌ Error deleting partner!',
       };
     }
   }
 
   /**
-   * Tạo keyboard quản lý partners
+   * Create partners management keyboard
    */
   private createPartnerManagementKeyboard() {
     return {
       inline_keyboard: [
         [
-          { text: '➕ Thêm Partner', callback_data: 'admin_add_partner' },
-          { text: '✏️ Chỉnh sửa', callback_data: 'admin_edit_partner' },
+          { text: '➕ Add Partner', callback_data: 'admin_add_partner' },
+          { text: '✏️ Edit', callback_data: 'admin_edit_partner' },
         ],
         [
-          { text: '🗑️ Xóa Partner', callback_data: 'admin_delete_partner' },
-          { text: '🔄 Làm mới', callback_data: 'admin_refresh_partners' },
+          { text: '🗑️ Delete Partner', callback_data: 'admin_delete_partner' },
+          { text: '🔄 Refresh', callback_data: 'admin_refresh_partners' },
         ],
-        [{ text: '🔙 Về Admin Panel', callback_data: 'admin_panel' }],
+        [{ text: '🔙 Back to Admin Panel', callback_data: 'admin_panel' }],
       ],
     };
   }
 
   /**
-   * Help message cho lệnh add_partner
+   * Help message for add_partner command
    */
   private getAddPartnerHelpMessage(): string {
-    return `**Thêm Partner Mới**
+    return `**Add New Partner**
 
-**Cú pháp:** \`/add_partner <name> <display_name> <wallet_address>\`
+**Syntax:** \`/add_partner <name> <display_name> <wallet_address>\`
 
-**Tham số:**
-• \`name\`: Tên ID của partner (không có khoảng trắng)
-• \`display_name\`: Tên hiển thị cho user
-• \`wallet_address\`: Địa chỉ ví trên blockchain
+**Parameters:**
+• \`name\`: Partner ID name (no spaces)
+• \`display_name\`: Display name for user
+• \`wallet_address\`: Wallet address on blockchain
 
-**Ví dụ:**
+**Example:**
 \`/add_partner partner_a "Partner A" 0x1234567890abcdef1234567890abcdef12345678\`
 
-**Lưu ý:** Partner mới sẽ sử dụng cấu hình mặc định (USDT, BSC Chain ID 56)`;
+**Note:** New partner will use default configuration (USDT, BSC Chain ID 56)`;
   }
 
   /**
-   * Help message cho lệnh edit_partner
+   * Help message for edit_partner command
    */
   private getEditPartnerHelpMessage(): string {
-    return `**Chỉnh sửa Partner**
+    return `**Edit Partner**
 
-**Cú pháp:** \`/edit_partner <name> <field> <value> [field value]...\`
+**Syntax:** \`/edit_partner <name> <field> <value> [field value]...\`
 
-**Các trường có thể chỉnh sửa:**
-• \`display <tên_mới>\`: Tên hiển thị
-• \`address <địa_chỉ_mới>\`: Địa chỉ ví
+**Editable fields:**
+• \`display <new_name>\`: Display name
+• \`address <new_address>\`: Wallet address
 • \`contract <contract_address>\`: Contract address
 • \`chain <chain_id>\`: Chain ID
-• \`token <token_symbol>\`: Ký hiệu token
-• \`decimals <số_thập_phân>\`: Số thập phân
-• \`description <mô_tả>\`: Mô tả
-• \`priority <độ_ưu_tiên>\`: Độ ưu tiên hiển thị
+• \`token <token_symbol>\`: Token symbol
+• \`decimals <decimal_number>\`: Decimals
+• \`description <description>\`: Description
+• \`priority <priority>\`: Display priority
 
-**Ví dụ:**
+**Example:**
 \`/edit_partner partner_a display "Partner A Updated" address 0xnewaddress123\``;
   }
 
   /**
-   * Help message cho lệnh delete_partner
+   * Help message for delete_partner command
    */
   private getDeletePartnerHelpMessage(): string {
-    return `**Xóa Partner**
+    return `**Delete Partner**
 
-**Cú pháp:** \`/delete_partner <name>\`
+**Syntax:** \`/delete_partner <name>\`
 
-**Tham số:**
-• \`name\`: Tên ID của partner cần xóa
+**Parameters:**
+• \`name\`: ID name of partner to delete
 
-**Ví dụ:**
+**Example:**
 \`/delete_partner partner_a\`
 
-**Lưu ý:** Partner sẽ được ẩn (soft delete) chứ không xóa hoàn toàn khỏi database`;
+**Note:** Partner will be hidden (soft delete) not completely removed from database`;
   }
 
   /**
-   * Lấy partner theo name (public method)
+   * Get partner by name (public method)
    */
   async getPartnerByName(name: string) {
     return this.partnerService.getPartnerByName(name);
   }
 
   /**
-   * Tạo partner mới
+   * Create new partner
    */
   async createPartner(partnerData: {
     name: string;

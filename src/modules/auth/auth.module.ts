@@ -1,23 +1,23 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
-// Import model và service
+// Import model and service
 import { AuthService } from './auth.service';
 import { UserModel, userSchema } from './auth.model';
 
 /**
  * Auth Module
- * Quản lý authentication và authorization
+ * Manage authentication and authorization
  */
 @Module({
   imports: [
-    // Đăng ký UserModel với Mongoose
+    // Register UserModel with Mongoose
     MongooseModule.forFeature([
       { name: UserModel.name, schema: userSchema }
     ]),
   ],
   providers: [AuthService],
-  exports: [AuthService], // Export để các module khác có thể sử dụng
+  exports: [AuthService], // Export for other modules to use
 })
 export class AuthModule {}

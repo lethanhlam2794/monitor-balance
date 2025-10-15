@@ -23,7 +23,7 @@ export class MasterFundVinachainControllerService {
 
   async handleMasterFundVinachainCommand(chatId: number, userId: number, commandText?: string): Promise<MasterFundVinachainResponse> {
     try {
-      // Lấy thông tin Master Fund
+      // Get Master Fund information
       const result = await this.masterFundVinachainService.getMasterFundInfo();
 
       if (!result.success || !result.data) {
@@ -33,14 +33,14 @@ export class MasterFundVinachainControllerService {
         };
       }
 
-      // Kiểm tra quyền truy cập
+      // Check access permissions
       const isAuthorized = this.masterFundVinachainService.isAuthorizedUser(chatId);
 
-      // Lấy thông tin user để xác định role
+      // Get user information to determine role
       const user = await this.authService.findByTelegramId(userId);
       const userRole = user?.role;
 
-      // Tạo message
+      // Create message
       const message = this.masterFundVinachainService.buildMasterFundMessage(
         result.data.balance,
         result.data.currency,
@@ -49,14 +49,14 @@ export class MasterFundVinachainControllerService {
         userRole
       );
 
-      // Tạo keyboard dựa trên role
+      // Create keyboard based on role
       let keyboard;
       if (userRole === 'USER' || userRole === 'ADVANCED_USER') {
-        // User và Advanced User: keyboard cho partner wallet
+        // User and Advanced User: keyboard for partner wallet
         const partnerWalletAddress = this.masterFundVinachainService.getPartnerWalletAddress();
         keyboard = MessageBuilder.buildCopyPartnerWalletKeyboard(partnerWalletAddress);
       }
-      // Admin và Dev: không có keyboard (có thể copy trực tiếp từ text)
+      // Admin and Dev: no keyboard (can copy directly from text)
 
       this.logger.log('Success: true', message);
       return {

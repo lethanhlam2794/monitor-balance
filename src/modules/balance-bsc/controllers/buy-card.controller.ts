@@ -22,7 +22,7 @@ export class BuyCardControllerService {
   ) {}
 
   /**
-   * Xử lý command /view_buycard - Hiển thị danh sách partners để chọn
+   * Handle /view_buycard command - Show partners list to select
    */
   async handleViewBuyCardCommand(userRole?: string): Promise<BuyCardResponse> {
     try {
@@ -36,12 +36,12 @@ export class BuyCardControllerService {
       }
 
       if (partners.length === 1) {
-        // Nếu chỉ có 1 partner, tự động chọn
+        // If only 1 partner, auto select
         const partner = partners[0];
         return await this.handleViewBuyCardForPartner(partner.name, userRole);
       }
 
-      // Nếu có nhiều partners, hiển thị keyboard chọn
+      // If multiple partners, show selection keyboard
       let message = '📋 **Select Partner to view balance:**\n\n';
       partners.forEach((partner, index) => {
         message += `**${index + 1}\\. ${escapeMarkdownV2(partner.displayName)}**\n`;
@@ -66,7 +66,7 @@ export class BuyCardControllerService {
   }
 
   /**
-   * Xử lý xem balance cho partner cụ thể
+   * Handle viewing balance for specific partner
    */
   async handleViewBuyCardForPartner(
     partnerName: string,
@@ -103,7 +103,7 @@ export class BuyCardControllerService {
         partner.displayName,
       );
 
-      // Tạo keyboard cho tất cả user (tạm thời để debug)
+      // Create keyboard for all users (temporary for debug)
       let keyboard;
       this.logger.log(`User role: ${userRole}`);
       if (userRole === 'USER' || userRole === 'ADVANCED_USER' || !userRole) {
@@ -125,7 +125,7 @@ export class BuyCardControllerService {
   }
 
   /**
-   * Xử lý command /monitor_buy_card
+   * Handle /monitor_buy_card command
    */
   async handleMonitorBuyCardCommand(
     telegramId: number,
@@ -136,7 +136,7 @@ export class BuyCardControllerService {
       const args = commandText?.split(' ').slice(1) || [];
 
       if (args.length === 0) {
-        // Hiển thị hướng dẫn sử dụng
+        // Show usage instructions
         const helpMessage = this.buyCardService.getReminderHelpMessage();
         this.logger.log('Success: true', helpMessage);
         return {
@@ -148,7 +148,7 @@ export class BuyCardControllerService {
       const threshold = parseFloat(args[0]);
       const intervalMinutes = args[1] ? parseInt(args[1]) : 15;
 
-      // Gọi service để xử lý logic
+      // Call service to handle logic
       const result = await this.buyCardService.setReminder(
         telegramId,
         threshold,
@@ -172,7 +172,7 @@ export class BuyCardControllerService {
   }
 
   /**
-   * Đặt lịch nhắc kiểm tra balance
+   * Set balance check reminder schedule
    */
   async setReminder(
     telegramId: number,
@@ -187,14 +187,14 @@ export class BuyCardControllerService {
   }
 
   /**
-   * Clear tất cả cache balance
+   * Clear all cache balance
    */
   async clearAllBalanceCache(): Promise<void> {
     return this.etherscanService.clearAllBalanceCache();
   }
 
   /**
-   * Clear cache cho một address cụ thể
+   * Clear cache for a specific address
    */
   async clearBalanceCache(
     address: string,
@@ -209,7 +209,7 @@ export class BuyCardControllerService {
   }
 
   /**
-   * Lấy thông tin API key status
+   * Get API key status information
    */
   getApiKeyStatus(): {
     primaryKey: string;
@@ -221,24 +221,24 @@ export class BuyCardControllerService {
   }
 
   /**
-   * Tạo keyboard chọn partner
+   * Create partner selection keyboard
    */
   private createPartnerSelectionKeyboard(partners: any[]): any {
     const keyboard = {
       inline_keyboard: [] as any[],
     };
 
-    // Tạo buttons cho mỗi partner (tối đa 2 partners per row)
+    // Create buttons for each partner (max 2 partners per row)
     for (let i = 0; i < partners.length; i += 2) {
       const row: any[] = [];
 
-      // Partner đầu tiên trong row
+      // First partner in row
       row.push({
         text: `📊 ${partners[i].displayName}`,
         callback_data: `view_partner_${partners[i].name}`,
       });
 
-      // Partner thứ hai trong row (nếu có)
+      // Second partner in row (if any)
       if (i + 1 < partners.length) {
         row.push({
           text: `📊 ${partners[i + 1].displayName}`,

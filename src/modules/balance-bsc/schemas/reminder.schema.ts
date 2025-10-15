@@ -9,25 +9,25 @@ export class Reminder {
   telegramId: number;
 
   @Prop({ required: true })
-  threshold: number; // Ngưỡng cảnh báo (USDT)
+  threshold: number; // Alert threshold (USDT)
 
   @Prop({ required: true, default: 30 })
-  intervalMinutes: number; // Khoảng thời gian kiểm tra (phút) - mặc định 30 phút
+  intervalMinutes: number; // Check interval (minutes) - default 30 minutes
 
   @Prop({ required: true, default: true })
-  isActive: boolean; // Trạng thái hoạt động
+  isActive: boolean; // Active status
 
   @Prop({ default: null })
-  lastCheckedAt: Date; // Lần kiểm tra cuối
+  lastCheckedAt: Date; // Last check time
 
   @Prop({ default: null })
-  lastAlertAt: Date; // Lần cảnh báo cuối
+  lastAlertAt: Date; // Last alert time
 
   @Prop({ default: 0 })
-  alertCount: number; // Số lần đã cảnh báo
+  alertCount: number; // Number of alerts sent
 
   @Prop({ default: null })
-  lastBalance: string; // Balance cuối cùng đã kiểm tra
+  lastBalance: string; // Last checked balance
 }
 
 export const ReminderSchema = SchemaFactory.createForClass(Reminder);

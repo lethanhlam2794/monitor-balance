@@ -1,5 +1,12 @@
-// Import các thư viện cần thiết
-import { IsNumber, IsString, IsOptional, IsEnum, IsBoolean, IsDate } from 'class-validator';
+// Import required libraries
+import {
+  IsNumber,
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsDate,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -7,18 +14,18 @@ import { Type } from 'class-transformer';
 import { UserRole } from './enums/user-role.enum';
 
 /**
- * DTO cho việc tạo/cập nhật user
+ * DTO for creating/updating user
  */
 export class CreateUserDto {
   @ApiProperty({
-    description: 'ID duy nhất của user trên Telegram',
+    description: "User's unique ID on Telegram",
     example: 123456789,
   })
   @IsNumber()
   telegramId: number;
 
   @ApiPropertyOptional({
-    description: 'Username trên Telegram',
+    description: 'Username on Telegram',
     example: 'john_doe',
   })
   @IsOptional()
@@ -26,7 +33,7 @@ export class CreateUserDto {
   username?: string;
 
   @ApiPropertyOptional({
-    description: 'Tên đầu của user',
+    description: "User's first name",
     example: 'John',
   })
   @IsOptional()
@@ -34,7 +41,7 @@ export class CreateUserDto {
   firstName?: string;
 
   @ApiPropertyOptional({
-    description: 'Tên cuối của user',
+    description: "User's last name",
     example: 'Doe',
   })
   @IsOptional()
@@ -42,7 +49,7 @@ export class CreateUserDto {
   lastName?: string;
 
   @ApiPropertyOptional({
-    description: 'Mã ngôn ngữ của user',
+    description: "User's language code",
     example: 'vi',
   })
   @IsOptional()
@@ -50,7 +57,7 @@ export class CreateUserDto {
   languageCode?: string;
 
   @ApiPropertyOptional({
-    description: 'Role của user trong hệ thống',
+    description: 'User role in system',
     enum: UserRole,
     default: UserRole.USER,
   })
@@ -59,7 +66,7 @@ export class CreateUserDto {
   role?: UserRole;
 
   @ApiPropertyOptional({
-    description: 'Trạng thái hoạt động của user',
+    description: 'User active status',
     default: true,
   })
   @IsOptional()
@@ -68,11 +75,11 @@ export class CreateUserDto {
 }
 
 /**
- * DTO cho việc cập nhật user
+ * DTO for updating user
  */
 export class UpdateUserDto {
   @ApiPropertyOptional({
-    description: 'Username trên Telegram',
+    description: 'Username on Telegram',
     example: 'john_doe',
   })
   @IsOptional()
@@ -80,7 +87,7 @@ export class UpdateUserDto {
   username?: string;
 
   @ApiPropertyOptional({
-    description: 'Tên đầu của user',
+    description: "User's first name",
     example: 'John',
   })
   @IsOptional()
@@ -88,7 +95,7 @@ export class UpdateUserDto {
   firstName?: string;
 
   @ApiPropertyOptional({
-    description: 'Tên cuối của user',
+    description: "User's last name",
     example: 'Doe',
   })
   @IsOptional()
@@ -96,7 +103,7 @@ export class UpdateUserDto {
   lastName?: string;
 
   @ApiPropertyOptional({
-    description: 'Mã ngôn ngữ của user',
+    description: "User's language code",
     example: 'vi',
   })
   @IsOptional()
@@ -104,7 +111,7 @@ export class UpdateUserDto {
   languageCode?: string;
 
   @ApiPropertyOptional({
-    description: 'Role của user trong hệ thống',
+    description: 'User role in system',
     enum: UserRole,
   })
   @IsOptional()
@@ -112,7 +119,7 @@ export class UpdateUserDto {
   role?: UserRole;
 
   @ApiPropertyOptional({
-    description: 'Trạng thái hoạt động của user',
+    description: 'User active status',
   })
   @IsOptional()
   @IsBoolean()
@@ -120,25 +127,25 @@ export class UpdateUserDto {
 }
 
 /**
- * DTO cho việc cập nhật role của user
+ * DTO for updating user role
  */
 export class UpdateUserRoleDto {
   @ApiProperty({
-    description: 'Telegram ID của admin thực hiện thao tác',
+    description: 'Telegram ID of admin performing the operation',
     example: 123456789,
   })
   @IsNumber()
   adminTelegramId: number;
 
   @ApiProperty({
-    description: 'Telegram ID của user cần cập nhật role',
+    description: "User's Telegram ID to update role",
     example: 987654321,
   })
   @IsNumber()
   targetTelegramId: number;
 
   @ApiProperty({
-    description: 'Role mới cần cập nhật',
+    description: 'New role to update',
     enum: UserRole,
   })
   @IsEnum(UserRole)
@@ -146,66 +153,66 @@ export class UpdateUserRoleDto {
 }
 
 /**
- * DTO cho response user
+ * DTO for user response
  */
 export class UserResponseDto {
   @ApiProperty({
-    description: 'ID duy nhất của user trên Telegram',
+    description: "User's unique ID on Telegram",
     example: 123456789,
   })
   telegramId: number;
 
   @ApiPropertyOptional({
-    description: 'Username trên Telegram',
+    description: 'Username on Telegram',
     example: 'john_doe',
   })
   username?: string;
 
   @ApiPropertyOptional({
-    description: 'Tên đầu của user',
+    description: "User's first name",
     example: 'John',
   })
   firstName?: string;
 
   @ApiPropertyOptional({
-    description: 'Tên cuối của user',
+    description: "User's last name",
     example: 'Doe',
   })
   lastName?: string;
 
   @ApiPropertyOptional({
-    description: 'Mã ngôn ngữ của user',
+    description: "User's language code",
     example: 'vi',
   })
   languageCode?: string;
 
   @ApiProperty({
-    description: 'Role của user trong hệ thống',
+    description: 'User role in system',
     enum: UserRole,
   })
   role: UserRole;
 
   @ApiProperty({
-    description: 'Trạng thái hoạt động của user',
+    description: 'User active status',
   })
   isActive: boolean;
 
   @ApiProperty({
-    description: 'Thời gian tạo user',
+    description: 'User creation time',
   })
   @Type(() => Date)
   @IsDate()
   createdAt: Date;
 
   @ApiPropertyOptional({
-    description: 'Thời gian cập nhật cuối',
+    description: 'Last update time',
   })
   @Type(() => Date)
   @IsDate()
   updatedAt?: Date;
 
   @ApiProperty({
-    description: 'Thời gian hoạt động cuối',
+    description: 'Last activity time',
   })
   @Type(() => Date)
   @IsDate()
@@ -213,17 +220,17 @@ export class UserResponseDto {
 }
 
 /**
- * DTO cho thống kê users
+ * DTO for user statistics
  */
 export class UserStatsDto {
   @ApiProperty({
-    description: 'Tổng số users',
+    description: 'Total users',
     example: 100,
   })
   total: number;
 
   @ApiProperty({
-    description: 'Số users theo từng role',
+    description: 'Number of users by role',
     example: {
       DEV: 1,
       ADMIN: 2,
@@ -234,18 +241,18 @@ export class UserStatsDto {
   byRole: Record<UserRole, number>;
 
   @ApiProperty({
-    description: 'Số users hoạt động hôm nay',
+    description: 'Number of active users today',
     example: 25,
   })
   activeToday: number;
 }
 
 /**
- * DTO cho việc tìm kiếm users
+ * DTO for searching users
  */
 export class FindUsersDto {
   @ApiPropertyOptional({
-    description: 'Role cần lọc',
+    description: 'Role to filter',
     enum: UserRole,
   })
   @IsOptional()
@@ -253,7 +260,7 @@ export class FindUsersDto {
   role?: UserRole;
 
   @ApiPropertyOptional({
-    description: 'Trạng thái hoạt động',
+    description: 'Active status',
     default: true,
   })
   @IsOptional()
@@ -261,7 +268,7 @@ export class FindUsersDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Số trang (pagination)',
+    description: 'Page number (pagination)',
     default: 1,
   })
   @IsOptional()
@@ -270,7 +277,7 @@ export class FindUsersDto {
   page?: number;
 
   @ApiPropertyOptional({
-    description: 'Số lượng items per page',
+    description: 'Number of items per page',
     default: 10,
   })
   @IsOptional()

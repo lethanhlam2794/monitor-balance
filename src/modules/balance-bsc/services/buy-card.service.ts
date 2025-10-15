@@ -38,14 +38,14 @@ export class BuyCardService {
         this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
       const chainId = 56; // BSC
 
-      // Kiểm tra environment variables
+      // Check environment variables
       if (!walletAddress) {
         this.logger.error(`Missing environment variable: ADDRESS_BUY_CARD`, {
           errorCode: ERR_CODE.MISSING_ENV_VARIABLE,
         });
         return {
           success: false,
-          message: '❌ Thiếu cấu hình địa chỉ ví Buy Card!',
+          message: '❌ Missing Buy Card wallet address configuration!',
         };
       }
 
@@ -58,7 +58,7 @@ export class BuyCardService {
         );
         return {
           success: false,
-          message: '❌ Thiếu cấu hình địa chỉ contract USDT!',
+          message: '❌ Missing USDT contract address configuration!',
         };
       }
 
@@ -71,7 +71,7 @@ export class BuyCardService {
       if (!balanceInfo) {
         return {
           success: false,
-          message: '❌ Không thể lấy thông tin balance!',
+          message: '❌ Cannot get balance information!',
         };
       }
 
@@ -94,7 +94,7 @@ export class BuyCardService {
   }
 
   /**
-   * Đặt lịch nhắc kiểm tra balance
+   * Set balance check reminder schedule
    */
   async setReminder(
     telegramId: number,
@@ -123,7 +123,7 @@ export class BuyCardService {
       }
 
       if (threshold === 0) {
-        // Tắt nhắc nhở
+        // Turn off reminder
         const success =
           await this.reminderService.deactivateReminder(telegramId);
         if (success) {
@@ -166,7 +166,7 @@ Bot will automatically check balance every 30 minutes and send alerts 5 minutes 
   }
 
   /**
-   * Lấy hướng dẫn sử dụng command
+   * Get command usage instructions
    */
   getReminderHelpMessage(): string {
     return `**Set Balance Monitoring Reminder**

@@ -1,10 +1,10 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
 
-// Import services và schemas
+// Import services and schemas
 import { EtherscanService } from './etherscan.service';
 import { ReminderService } from './services/reminder.service';
 import { BuyCardService } from './services/buy-card.service';
@@ -18,13 +18,13 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
 
 /**
  * Balance BSC Module
- * Quản lý việc kiểm tra balance trên BSC network
+ * Manage balance checking on BSC network
  */
 @Module({
   imports: [
     // HttpModule cho Etherscan API calls
     HttpModule,
-    // MongooseModule cho Reminder và Partner schemas
+    // MongooseModule for Reminder and Partner schemas
     MongooseModule.forFeature([
       { name: Reminder.name, schema: ReminderSchema },
       { name: Partner.name, schema: PartnerSchema },
@@ -51,6 +51,6 @@ import { DiscordWebhookService } from '@shared/services/discord-webhook.service'
     PartnerService,
     PartnerControllerService,
     DiscordWebhookService,
-  ], // Export để các module khác có thể sử dụng
+  ], // Export for other modules to use
 })
 export class BalanceBscModule {}

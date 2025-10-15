@@ -1,15 +1,15 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-// Import User model và interfaces
+// Import User model and interfaces
 import { UserModel, UserDocument } from './auth.model';
 import { UserRole } from './enums/user-role.enum';
 
 /**
- * Service xử lý authentication và authorization
- * Quản lý user roles và permissions
+ * Service handling authentication and authorization
+ * Manage user roles and permissions
  */
 @Injectable()
 export class AuthService {
@@ -41,7 +41,7 @@ export class AuthService {
       const existingUser = await this.findByTelegramId(userData.telegramId);
       
       if (existingUser) {
-        // Cập nhật thông tin user nếu đã tồn tại
+        // Update user information if already exists
         existingUser.username = userData.username || existingUser.username;
         existingUser.firstName = userData.firstName || existingUser.firstName;
         existingUser.lastName = userData.lastName || existingUser.lastName;
@@ -50,7 +50,7 @@ export class AuthService {
         
         return await (existingUser as UserDocument).save();
       } else {
-        // Tạo user mới với role mặc định là USER
+        // Create new user with default role USER
         const newUser = new this.userModel({
           ...userData,
           role: UserRole.USER,
@@ -75,7 +75,7 @@ export class AuthService {
         return false;
       }
 
-      // Kiểm tra role hierarchy
+      // Check role hierarchy
       return this.checkRoleHierarchy(user.role, requiredRole);
     } catch (error) {
       this.logger.error(`Error checking permission for user ${telegramId}:`, error);
@@ -84,11 +84,11 @@ export class AuthService {
   }
 
   /**
-   * Kiểm tra role hierarchy
+   * Check role hierarchy
    * DEV > ADMIN > ADVANCED_USER > USER
-   * @param userRole - Role của user
-   * @param requiredRole - Role yêu cầu
-   * @returns true nếu user role >= required role
+   * @param userRole - User role
+   * @param requiredRole - Required role
+   * @returns true if user role >= required role
    */
   private checkRoleHierarchy(userRole: UserRole, requiredRole: UserRole): boolean {
     const roleHierarchy = {
@@ -102,11 +102,11 @@ export class AuthService {
   }
 
   /**
-   * Cập nhật role của user (chỉ DEV và ADMIN mới có quyền)
-   * @param adminTelegramId - ID của admin thực hiện
-   * @param targetTelegramId - ID của user cần cập nhật
-   * @param newRole - Role mới
-   * @returns true nếu thành công, false nếu không có quyền
+   * Update user role (only DEV and ADMIN have permission)
+   * @param adminTelegramId - ID of admin performing
+   * @param targetTelegramId - ID of user to update
+   * @param newRole - New role
+   * @returns true if successful, false if no permission
    */
   async updateUserRole(
     adminTelegramId: number,
@@ -114,14 +114,14 @@ export class AuthService {
     newRole: UserRole,
   ): Promise<boolean> {
     try {
-      // Kiểm tra quyền của admin
+      // Check admin permissions
       const hasPermission = await this.hasPermission(adminTelegramId, UserRole.ADMIN);
       if (!hasPermission) {
         this.logger.warn(`User ${adminTelegramId} attempted to update role without permission`);
         return false;
       }
 
-      // Cập nhật role
+      // Update role
       const result = await this.userModel.updateOne(
         { telegramId: targetTelegramId },
         { role: newRole, updatedAt: new Date() },
@@ -140,9 +140,9 @@ export class AuthService {
   }
 
   /**
-   * Lấy danh sách users theo role
-   * @param role - Role cần lọc
-   * @returns Danh sách users
+   * Get users list by role
+   * @param role - Role to filter
+   * @returns Users list
    */
   async getUsersByRole(role: UserRole): Promise<UserModel[]> {
     try {
@@ -154,8 +154,8 @@ export class AuthService {
   }
 
   /**
-   * Lấy thống kê users
-   * @returns Object chứa thống kê
+   * Get user statistics
+   * @returns Object containing statistics
    */
   async getUserStats(): Promise<{
     total: number;

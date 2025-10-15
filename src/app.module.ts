@@ -20,8 +20,8 @@ import { AppService } from './app.service';
   imports: [
     // Configuration
     ConfigModule.forRoot({
-      isGlobal: true, // Làm cho ConfigModule có thể sử dụng ở mọi nơi
-      envFilePath: '.env', // Đường dẫn đến file .env
+      isGlobal: true, // Make ConfigModule available everywhere
+      envFilePath: '.env', // Path to .env file
     }),
 
     // Database

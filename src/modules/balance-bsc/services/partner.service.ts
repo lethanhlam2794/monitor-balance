@@ -38,7 +38,7 @@ export class PartnerService {
   ) {}
 
   /**
-   * Tạo partner mới
+   * Create new partner
    */
   async createPartner(createPartnerDto: CreatePartnerDto): Promise<Partner> {
     try {
@@ -56,7 +56,7 @@ export class PartnerService {
   }
 
   /**
-   * Lấy tất cả partners active
+   * Get all active partners
    */
   async getActivePartners(): Promise<Partner[]> {
     try {
@@ -71,7 +71,7 @@ export class PartnerService {
   }
 
   /**
-   * Lấy tất cả partners (bao gồm inactive)
+   * Get all partners (including inactive)
    */
   async getAllPartners(): Promise<Partner[]> {
     try {
@@ -86,7 +86,7 @@ export class PartnerService {
   }
 
   /**
-   * Lấy partner theo name
+   * Get partner by name
    */
   async getPartnerByName(name: string): Promise<Partner | null> {
     try {
@@ -98,7 +98,7 @@ export class PartnerService {
   }
 
   /**
-   * Lấy partner theo ID
+   * Get partner by ID
    */
   async getPartnerById(id: string): Promise<Partner | null> {
     try {
@@ -110,7 +110,7 @@ export class PartnerService {
   }
 
   /**
-   * Cập nhật partner
+   * Update partner
    */
   async updatePartner(
     name: string,
@@ -133,7 +133,7 @@ export class PartnerService {
   }
 
   /**
-   * Xóa partner (soft delete - set isActive = false)
+   * Delete partner (soft delete - set isActive = false)
    */
   async deletePartner(name: string): Promise<boolean> {
     try {
@@ -158,7 +158,7 @@ export class PartnerService {
   }
 
   /**
-   * Khôi phục partner (set isActive = true)
+   * Restore partner (set isActive = true)
    */
   async restorePartner(name: string): Promise<boolean> {
     try {
@@ -179,7 +179,7 @@ export class PartnerService {
   }
 
   /**
-   * Kiểm tra partner có tồn tại không
+   * Check if partner exists
    */
   async partnerExists(name: string): Promise<boolean> {
     try {
@@ -192,7 +192,7 @@ export class PartnerService {
   }
 
   /**
-   * Khởi tạo partner mặc định (Vinachain)
+   * Initialize default partner (Vinachain)
    */
   async initializeDefaultPartner(): Promise<void> {
     try {

@@ -12,7 +12,7 @@ export class ReminderService {
   ) {}
 
   /**
-   * Tạo hoặc cập nhật reminder cho user
+   * Create or update reminder for user
    */
   async createOrUpdateReminder(
     telegramId: number,
@@ -40,7 +40,7 @@ export class ReminderService {
   }
 
   /**
-   * Lấy reminder của user
+   * Get user's reminder
    */
   async getReminder(telegramId: number): Promise<ReminderDocument | null> {
     try {
@@ -52,7 +52,7 @@ export class ReminderService {
   }
 
   /**
-   * Xóa reminder của user
+   * Delete user's reminder
    */
   async deleteReminder(telegramId: number): Promise<boolean> {
     try {
@@ -66,7 +66,7 @@ export class ReminderService {
   }
 
   /**
-   * Tắt reminder của user
+   * Turn off user's reminder
    */
   async deactivateReminder(telegramId: number): Promise<boolean> {
     try {
@@ -84,7 +84,7 @@ export class ReminderService {
   }
 
   /**
-   * Lấy tất cả reminder đang hoạt động
+   * Get all active reminders
    */
   async getActiveReminders(): Promise<ReminderDocument[]> {
     try {
@@ -96,7 +96,7 @@ export class ReminderService {
   }
 
   /**
-   * Cập nhật thời gian kiểm tra cuối
+   * Update last check time
    */
   async updateLastChecked(telegramId: number, balance: string): Promise<void> {
     try {
@@ -113,7 +113,7 @@ export class ReminderService {
   }
 
   /**
-   * Cập nhật thời gian cảnh báo cuối
+   * Update last alert time
    */
   async updateLastAlert(telegramId: number): Promise<void> {
     try {
@@ -130,7 +130,7 @@ export class ReminderService {
   }
 
   /**
-   * Kiểm tra xem có cần gửi cảnh báo không
+   * Check if alert needs to be sent
    */
   async shouldSendAlert(telegramId: number, currentBalance: number): Promise<boolean> {
     try {
@@ -139,7 +139,7 @@ export class ReminderService {
         return false;
       }
 
-      // Kiểm tra ngưỡng
+      // Check threshold
       if (currentBalance < reminder.threshold) {
         return true;
       }

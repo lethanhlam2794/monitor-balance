@@ -1,4 +1,4 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { IsNumber, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -6,25 +6,25 @@ import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../../auth/enums/user-role.enum';
 
 /**
- * DTO cho việc cập nhật role của user
+ * DTO for updating user role
  */
 export class UpdateUserRoleDto {
   @ApiProperty({
-    description: 'Telegram ID của admin thực hiện thao tác',
+    description: 'Telegram ID of admin performing the operation',
     example: 123456789,
   })
   @IsNumber()
   adminTelegramId: number;
 
   @ApiProperty({
-    description: 'Telegram ID của user cần cập nhật role',
+    description: 'User's Telegram ID to update role',
     example: 987654321,
   })
   @IsNumber()
   targetTelegramId: number;
 
   @ApiProperty({
-    description: 'Role mới cần cập nhật',
+    description: 'New role to update',
     example: UserRole.ADMIN,
     enum: UserRole,
   })

@@ -1,27 +1,27 @@
 /**
- * Enum định nghĩa các role của user trong hệ thống
- * Thứ tự từ cao xuống thấp: DEV > ADMIN > ADVANCED_USER > USER
+ * Enum defining user roles in system
+ * Order from high to low: DEV > ADMIN > ADVANCED_USER > USER
  */
 export enum UserRole {
-  /** Developer - Quyền cao nhất, có thể làm mọi thứ */
+  /** Developer - Highest privileges, can do everything */
   DEV = 'DEV',
   
-  /** Administrator - Quản lý hệ thống, có thể quản lý users */
+  /** Administrator - System management, can manage users */
   ADMIN = 'ADMIN',
   
-  /** User nâng cao - Có thêm một số quyền đặc biệt */
+  /** Advanced User - Has additional special privileges */
   ADVANCED_USER = 'ADVANCED_USER',
   
-  /** User thường - Quyền cơ bản */
+  /** Regular User - Basic privileges */
   USER = 'USER',
 }
 
 /**
- * Mapping role với mô tả
+ * Role mapping with description
  */
 export const ROLE_DESCRIPTIONS = {
-  [UserRole.DEV]: 'Developer - Quyền cao nhất',
-  [UserRole.ADMIN]: 'Administrator - Quản lý hệ thống',
-  [UserRole.ADVANCED_USER]: 'User nâng cao - Có quyền đặc biệt',
-  [UserRole.USER]: 'User thường - Quyền cơ bản',
+  [UserRole.DEV]: 'Developer - Highest privileges',
+  [UserRole.ADMIN]: 'Administrator - System management',
+  [UserRole.ADVANCED_USER]: 'Advanced User - Has special privileges',
+  [UserRole.USER]: 'Regular User - Basic privileges',
 } as const;

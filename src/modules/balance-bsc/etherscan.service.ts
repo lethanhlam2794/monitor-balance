@@ -1,4 +1,4 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
@@ -30,7 +30,7 @@ interface TokenBalanceInfo {
 }
 
 /**
- * Service để tương tác với Etherscan API
+ * Service to interact with Etherscan API
  */
 @Injectable()
 export class EtherscanService {
@@ -64,9 +64,9 @@ export class EtherscanService {
   }
 
   /**
-   * Lấy token balance từ Etherscan API
-   * @param address - Địa chỉ ví cần kiểm tra
-   * @param contractAddress - Địa chỉ contract của token
+   * Get token balance from Etherscan API
+   * @param address - Wallet address to check
+   * @param contractAddress - Token contract address
    * @param chainId - Chain ID (56 = BSC, 1 = Ethereum)
    * @returns Token balance info
    */
@@ -76,10 +76,10 @@ export class EtherscanService {
     chainId: number = 56,
     forceRefresh: boolean = false,
   ): Promise<TokenBalanceInfo | null> {
-    // Tạo cache key
+    // Create cache key
     const cacheKey = `balance:${address}:${contractAddress}:${chainId}`;
 
-    // Kiểm tra cache trước (trừ khi force refresh)
+    // Check cache first (unless force refresh)
     if (!forceRefresh) {
       const cachedBalance =
         await this.cacheManager.get<TokenBalanceInfo>(cacheKey);
@@ -92,7 +92,7 @@ export class EtherscanService {
       await this.cacheManager.del(cacheKey);
     }
 
-    // Thử primary API key trước
+    // Try primary API key first
     let result = await this.tryApiCall(
       address,
       contractAddress,
@@ -101,12 +101,12 @@ export class EtherscanService {
     );
 
     if (result) {
-      // Lưu vào cache với TTL 25 phút (ít hơn cron 30 phút)
+      // Save to cache with TTL 25 minutes (less than cron 30 minutes)
       await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000);
       return result;
     }
 
-    // Nếu primary key thất bại và có fallback key, thử fallback
+    // If primary key fails and has fallback key, try fallback
     if (this.fallbackApiKey && this.currentApiKey !== this.fallbackApiKey) {
       this.logger.warn('Primary API key failed, trying fallback API key...');
       this.currentApiKey = this.fallbackApiKey;
@@ -119,15 +119,15 @@ export class EtherscanService {
 
       if (result) {
         this.logger.log('Fallback API key successful');
-        // Lưu vào cache với TTL 25 phút
+        // Save to cache with TTL 25 minutes
         await this.cacheManager.set(cacheKey, result, 25 * 60 * 1000);
         return result;
       }
     }
 
-    // Cả hai API key đều thất bại
+    // Both API keys failed
     this.logger.error('Both primary and fallback API keys failed');
-    // Bắn audit lên Discord với thông tin lỗi gần nhất
+    // Send audit to Discord with latest error information
     const lastPrimaryErr = this.apiKeyErrors.get(this.primaryApiKey) || 0;
     const lastFallbackErr = this.apiKeyErrors.get(this.fallbackApiKey) || 0;
     await this.discordWebhook.auditWebhook(
@@ -183,7 +183,7 @@ export class EtherscanService {
         this.httpService.get<EtherscanResponse>(url, { params }),
       );
 
-      // Bắn audit cho tất cả response từ Etherscan
+      // Send audit for all responses from Etherscan
       const isSuccess =
         response.data.status === '1' && response.data.message === 'OK';
 
@@ -204,9 +204,9 @@ export class EtherscanService {
 
       if (isSuccess) {
         const balance = response.data.result;
-        const balanceFormatted = this.formatTokenBalance(balance, 18); // USDT có 18 decimals
+        const balanceFormatted = this.formatTokenBalance(balance, 18); // USDT has 18 decimals
 
-        // Reset error count cho API key này
+        // Reset error count for this API key
         this.apiKeyErrors.delete(apiKey);
 
         return {
@@ -218,11 +218,11 @@ export class EtherscanService {
           decimals: 18,
         };
       } else {
-        // Tăng error count cho API key này
+        // Increase error count for this API key
         const errorCount = (this.apiKeyErrors.get(apiKey) || 0) + 1;
         this.apiKeyErrors.set(apiKey, errorCount);
 
-        // Kiểm tra nếu là lỗi API tạm thời (rate limit, maintenance)
+        // Check if it is temporary API error (rate limit, maintenance)
         if (
           response.data.message.includes('temporarily unavailable') ||
           response.data.message.includes('rate limit') ||
@@ -239,7 +239,7 @@ export class EtherscanService {
         return null;
       }
     } catch (error) {
-      // Tăng error count cho API key này
+      // Increase error count for this API key
       const errorCount = (this.apiKeyErrors.get(apiKey) || 0) + 1;
       this.apiKeyErrors.set(apiKey, errorCount);
 
@@ -247,7 +247,7 @@ export class EtherscanService {
         `Error fetching token balance with API key ${apiKey.substring(0, 8)}... (Error count: ${errorCount}):`,
         error,
       );
-      // Gửi audit với exception chi tiết
+      // Send audit with detailed exception
       await this.discordWebhook.auditWebhook(
         'Exception calling Etherscan',
         'Unexpected exception occurred while calling Etherscan API',
@@ -264,9 +264,9 @@ export class EtherscanService {
   }
 
   /**
-   * Format token balance từ wei sang readable format
-   * @param balance - Balance dưới dạng string (wei)
-   * @param decimals - Số decimals của token
+   * Format token balance from wei to readable format
+   * @param balance - Balance as string (wei)
+   * @param decimals - Number of token decimals
    * @returns Formatted balance string
    */
   private formatTokenBalance(balance: string, decimals: number): string {
@@ -281,7 +281,7 @@ export class EtherscanService {
         return wholePart.toString();
       }
 
-      // Format fractional part với 6 decimal places
+      // Format fractional part with 6 decimal places
       const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
       const trimmedFractional = fractionalStr.slice(0, 6).replace(/0+$/, '');
 
@@ -297,8 +297,8 @@ export class EtherscanService {
   }
 
   /**
-   * Lấy thông tin token từ contract address
-   * @param contractAddress - Địa chỉ contract
+   * Get token information from contract address
+   * @param contractAddress - Contract address
    * @returns Token info
    */
   getTokenInfo(contractAddress: string): {
@@ -306,7 +306,7 @@ export class EtherscanService {
     decimals: number;
     name: string;
   } {
-    // Mapping các token phổ biến
+    // Mapping common tokens
     const tokenMap: Record<
       string,
       { symbol: string; decimals: number; name: string }
@@ -338,11 +338,11 @@ export class EtherscanService {
   }
 
   /**
-   * Clear tất cả cache balance
+   * Clear all cache balance
    */
   async clearAllBalanceCache(): Promise<void> {
     try {
-      // Xóa cache bằng cách set với TTL = 0
+      // Clear cache by setting TTL = 0
       await this.cacheManager.set('balance:clear', 'cleared', 0);
       this.logger.log('Cleared all cache entries');
     } catch (error) {
@@ -352,7 +352,7 @@ export class EtherscanService {
   }
 
   /**
-   * Clear cache cho một address cụ thể
+   * Clear cache for a specific address
    */
   async clearBalanceCache(
     address: string,
@@ -370,7 +370,7 @@ export class EtherscanService {
   }
 
   /**
-   * Lấy thông tin API key status
+   * Get API key status information
    */
   getApiKeyStatus(): {
     primaryKey: string;

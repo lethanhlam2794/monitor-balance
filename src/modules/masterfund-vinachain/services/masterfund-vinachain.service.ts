@@ -21,25 +21,23 @@ export class MasterFundVinachainService {
   private readonly apiUrl = process.env.URL_MASTERFUND_VINACHAIN;
   private readonly token = process.env.TOKEN_MASTERFUND_VINACHAIN;
 
-  constructor(
-    private configService: ConfigService,
-  ) {}
+  constructor(private configService: ConfigService) {}
 
   /**
-   * Lấy thông tin Master Fund từ Vinachain API
+   * Get Master Fund information from Vinachain API
    */
   async getMasterFundInfo(): Promise<MasterFundResponse> {
     try {
       if (!this.apiUrl) {
         throw new Error('API URL is not configured');
       }
-      
+
       const response = await fetch(this.apiUrl, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -65,8 +63,8 @@ export class MasterFundVinachainService {
         data: {
           balance,
           currency,
-          wallets
-        }
+          wallets,
+        },
       };
     } catch (error) {
       this.logger.error('Error fetching Master Fund info:', error);
@@ -78,14 +76,14 @@ export class MasterFundVinachainService {
   }
 
   /**
-   * Tạo message hiển thị thông tin Master Fund
+   * Create message displaying Master Fund information
    */
   buildMasterFundMessage(
     balance: number,
     currency: string,
     wallets: Array<{ network: string; address: string }>,
     isAuthorized: boolean = false,
-    userRole?: string
+    userRole?: string,
   ): string {
     const header = escapeMarkdownV2('Master Fund Balance');
     const currencyLabel = escapeMarkdownV2('Currency:');
@@ -93,23 +91,26 @@ export class MasterFundVinachainService {
     const walletLabel = escapeMarkdownV2('Wallet Addresses:');
     const partnerWalletLabel = escapeMarkdownV2('Master Fund Deposit Wallet:');
     const lastUpdate = escapeMarkdownV2('Last Updated:');
-    
-    let resultText = `${header}\n\n` +
+
+    let resultText =
+      `${header}\n\n` +
       `*${currencyLabel}* ${escapeMarkdownV2(currency)}\n` +
       `*${balanceLabel}* ${escapeMarkdownV2(balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} ${escapeMarkdownV2(currency)}\n\n`;
 
-    // Hiển thị wallet addresses dựa trên role
+    // Display wallet addresses based on role
     if (userRole === 'ADMIN' || userRole === 'DEV') {
-      // Admin và Dev: hiển thị tất cả wallets + partner wallet
-      const walletList = wallets.map((wallet, index) => {
-        return `${index + 1}\\. ${escapeMarkdownV2(wallet.network)}: \`${wallet.address}\``;
-      }).join('\n');
+      // Admin and Dev: display all wallets + partner wallet
+      const walletList = wallets
+        .map((wallet, index) => {
+          return `${index + 1}\\. ${escapeMarkdownV2(wallet.network)}: \`${wallet.address}\``;
+        })
+        .join('\n');
       resultText += `*${walletLabel}*\n${walletList}\n\n`;
-      
-        // Thêm partner wallet
-        resultText += `*${escapeMarkdownV2('Partner Deposit Wallet')}* \`${this.getPartnerWalletAddress()}\`\n\n`;
+
+      // Add partner wallet
+      resultText += `*${escapeMarkdownV2('Partner Deposit Wallet')}* \`${this.getPartnerWalletAddress()}\`\n\n`;
     } else {
-      // User và Advanced User: chỉ hiển thị partner wallet
+      // User and Advanced User: only display partner wallet
       resultText += `*${partnerWalletLabel}* \`${this.getPartnerWalletAddress()}\`\n\n`;
     }
 
@@ -118,17 +119,22 @@ export class MasterFundVinachainService {
   }
 
   /**
-   * Lấy partner wallet address
+   * Get partner wallet address
    */
   getPartnerWalletAddress(): string {
-    return this.configService.get<string>('WALLET_DEPOSIT_MASTER_FUND') || 'address not found';
+    return (
+      this.configService.get<string>('WALLET_DEPOSIT_MASTER_FUND') ||
+      'address not found'
+    );
   }
 
   /**
-   * Kiểm tra xem user có được authorize không
+   * Check if user is authorized
    */
   isAuthorizedUser(chatId: number): boolean {
     const telegramChatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
-    return Boolean(telegramChatId && chatId.toString() === telegramChatId.toString());
+    return Boolean(
+      telegramChatId && chatId.toString() === telegramChatId.toString(),
+    );
   }
 }

@@ -1,6 +1,6 @@
 /**
- * Message Builder - Helper functions để tạo message động
- * Tách riêng khỏi static messages để tổ chức tốt hơn
+ * Message Builder - Helper functions to create dynamic messages
+ * Separated from static messages for better organization
  */
 
 import {
@@ -15,18 +15,25 @@ import {
 import TelegramBot from 'node-telegram-bot-api';
 
 /**
- * Escape ký tự đặc biệt cho MarkdownV2 (trừ backticks)
+ * Escape special characters for MarkdownV2 (except backticks)
  */
 export const escapeMarkdownV2 = (text: string): string => {
   return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
 };
 
 /**
- * Helper functions để tạo message động
+ * Format number with commas for better readability
+ */
+export const formatNumber = (num: number): string => {
+  return num.toLocaleString('en-US');
+};
+
+/**
+ * Helper functions to create dynamic messages
  */
 export const MessageBuilder = {
   /**
-   * Tạo help message dựa trên role
+   * Create help message based on role
    */
   buildHelpMessage: (
     roleDescription: string,
@@ -35,25 +42,25 @@ export const MessageBuilder = {
     hasDev: boolean,
   ): string => {
     let message = getMessage(BotMessages.HELP_HEADER);
-    message += ` **Role của bạn:** ${roleDescription}\n\n`;
+    message += ` **Your Role:** ${roleDescription}\n\n`;
 
-    // Commands cơ bản
-    message += ` **Commands cơ bản:**\n`;
+    // Basic commands
+    message += ` **Basic Commands:**\n`;
     COMMANDS_BY_ROLE.BASIC.forEach((command) => {
       message += `• ${command} - ${getCommandDescription(command)}\n`;
     });
     message += '\n';
 
-    // Commands nâng cao
+    // Advanced commands
     if (hasAdvanced) {
-      message += ` **Commands nâng cao:**\n`;
+      message += ` **Advanced Commands:**\n`;
       COMMANDS_BY_ROLE.ADVANCED.forEach((command) => {
         message += `• ${command} - ${getCommandDescription(command)}\n`;
       });
       message += '\n';
     }
 
-    // Commands Admin
+    // Admin commands
     if (hasAdmin) {
       message += ` **Commands Admin:**\n`;
       COMMANDS_BY_ROLE.ADMIN.forEach((command) => {
@@ -62,7 +69,7 @@ export const MessageBuilder = {
       message += '\n';
     }
 
-    // Commands Dev
+    // Developer commands
     if (hasDev) {
       message += ` **Commands Developer:**\n`;
       COMMANDS_BY_ROLE.DEV.forEach((command) => {
@@ -76,7 +83,7 @@ export const MessageBuilder = {
   },
 
   /**
-   * Tạo profile message
+   * Create profile message
    */
   buildProfileMessage: (
     telegramId: number,
@@ -100,7 +107,7 @@ ${getMessage(BotMessages.PROFILE_STATUS)}${isActive ? getMessage(BotMessages.PRO
   },
 
   /**
-   * Tạo stats message
+   * Create stats message
    */
   buildStatsMessage: (
     total: number,
@@ -121,7 +128,7 @@ ${getMessage(BotMessages.STATS_USER_COUNT)}${userCount}`;
   },
 
   /**
-   * Tạo buy card message
+   * Create buy card message
    */
   buildBuyCardMessage: (
     walletAddress: string,
@@ -154,7 +161,7 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
   },
 
   /**
-   * Tạo inline keyboard cho copy wallet address (chung cho tất cả)
+   * Create inline keyboard for copy wallet address (common for all)
    */
   buildCopyWalletKeyboard: (
     walletAddress: string,
@@ -163,7 +170,7 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
       inline_keyboard: [
         [
           {
-            text: '📋 sao chép địa chỉ ví',
+            text: '📋 Copy wallet address',
             copy_text: { text: walletAddress },
           } as any,
         ],
@@ -172,7 +179,7 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
   },
 
   /**
-   * Tạo inline keyboard cho copy multiple wallet addresses
+   * Create inline keyboard for copy multiple wallet addresses
    */
   buildCopyMultipleWalletsKeyboard: (
     wallets: Array<{ network: string; address: string }>,
@@ -180,12 +187,12 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
     const buttons = wallets.map(
       (wallet, index) =>
         ({
-          text: '📋 sao chép địa chỉ ví',
+          text: '📋 Copy wallet address',
           copy_text: { text: wallet.address },
         }) as any,
     );
 
-    // Chia buttons thành các hàng, mỗi hàng tối đa 2 buttons
+    // Split buttons into rows, maximum 2 buttons per row
     const rows: TelegramBot.InlineKeyboardButton[][] = [];
     for (let i = 0; i < buttons.length; i += 2) {
       rows.push(buttons.slice(i, i + 2));
@@ -197,7 +204,7 @@ ${lastUpdate}${escapeMarkdownV2(new Date().toLocaleString('vi-VN'))}`;
   },
 
   /**
-   * Tạo inline keyboard cho copy partner wallet (sử dụng lại buildCopyWalletKeyboard)
+   * Create inline keyboard for copy partner wallet (reuse buildCopyWalletKeyboard)
    */
   buildCopyPartnerWalletKeyboard: (
     walletAddress: string,

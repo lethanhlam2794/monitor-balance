@@ -6,40 +6,40 @@ export type PartnerDocument = Partner & Document;
 @Schema({ timestamps: true })
 export class Partner {
   @Prop({ required: true, unique: true })
-  name: string; // Tên partner (ví dụ: "Vinachain", "Partner A")
+  name: string; // Partner name (e.g. "Vinachain", "Partner A")
 
   @Prop({ required: true })
-  displayName: string; // Tên hiển thị cho user
+  displayName: string; // Display name for user
 
   @Prop({ required: true })
-  walletAddress: string; // Địa chỉ ví trên blockchain
+  walletAddress: string; // Wallet address on blockchain
 
   @Prop({
     required: true,
     default: '0x55d398326f99059fF775485246999027B3197955',
   })
-  contractAddress: string; // Contract address của token (mặc định USDT)
+  contractAddress: string; // Token contract address (default USDT)
 
   @Prop({ required: true, default: 56 })
-  chainId: number; // Chain ID (mặc định BSC)
+  chainId: number; // Chain ID (default BSC)
 
   @Prop({ required: true, default: 'USDT' })
-  tokenSymbol: string; // Ký hiệu token
+  tokenSymbol: string; // Token symbol
 
   @Prop({ required: true, default: 18 })
-  tokenDecimals: number; // Số thập phân của token
+  tokenDecimals: number; // Token decimals
 
   @Prop({ required: true, default: true })
-  isActive: boolean; // Trạng thái hoạt động
+  isActive: boolean; // Active status
 
   @Prop({ default: '' })
-  description: string; // Mô tả partner
+  description: string; // Description partner
 
   @Prop({ default: null })
-  logoUrl: string; // URL logo (tùy chọn)
+  logoUrl: string; // Logo URL (optional)
 
   @Prop({ default: 0 })
-  priority: number; // Độ ưu tiên hiển thị (số càng nhỏ càng ưu tiên)
+  priority: number; // Display priority (smaller number = higher priority)
 }
 
 export const PartnerSchema = SchemaFactory.createForClass(Partner);

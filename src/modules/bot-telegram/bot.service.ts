@@ -1,4 +1,4 @@
-// Import các thư viện cần thiết
+// Import required libraries
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,7 +9,7 @@ import type { Cache } from 'cache-manager';
 // Import Telegram Bot API
 import TelegramBot from 'node-telegram-bot-api';
 
-// Import services và models
+// Import services and models
 import { AuthService } from '../auth/auth.service';
 import { UserModel, UserDocument } from '../auth/auth.model';
 import { BuyCardControllerService } from '../balance-bsc/controllers/buy-card.controller';
@@ -27,7 +27,7 @@ import { ERR_CODE } from '@shared/constants';
 import { UserRole, ROLE_DESCRIPTIONS } from '../auth/enums/user-role.enum';
 import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 
-// Sử dụng type có sẵn từ node-telegram-bot-api
+// Use existing type from node-telegram-bot-api
 type TelegramMessage = TelegramBot.Message;
 
 // Constants
@@ -35,8 +35,8 @@ const CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const MAX_THRESHOLD = 1000000;
 
 /**
- * Service xử lý Telegram Bot
- * Quản lý commands, messages và tích hợp với hệ thống auth
+ * Telegram Bot service
+ * Manage commands, messages and integrate with auth system
  */
 @Injectable()
 export class BotService {
@@ -59,7 +59,7 @@ export class BotService {
   }
 
   /**
-   * Khởi tạo Telegram Bot
+   * Initialize Telegram Bot
    */
   private initializeBot(): void {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
@@ -77,25 +77,25 @@ export class BotService {
   }
 
   /**
-   * Thiết lập các event handlers cho bot
+   * Set up event handlers for bot
    */
   private setupEventHandlers(): void {
-    // Xử lý lỗi
+    // Handle errors
     this.bot.on('error', (error) => {
       this.logger.error('Telegram Bot Error:', error);
     });
 
-    // Xử lý polling error
+    // Handle polling error
     this.bot.on('polling_error', (error) => {
       this.logger.error('Telegram Bot Polling Error:', error);
     });
 
-    // Xử lý message mới
+    // Handle new message
     this.bot.on('message', async (msg: TelegramMessage) => {
       await this.handleMessage(msg);
     });
 
-    // Xử lý callback query (inline keyboard)
+    // Handle callback query (inline keyboard)
     this.bot.on('callback_query', async (callbackQuery) => {
       await this.handleCallbackQuery(callbackQuery);
     });
@@ -103,7 +103,7 @@ export class BotService {
 
   private async handleMessage(msg: TelegramMessage): Promise<void> {
     try {
-      // Lưu/cập nhật thông tin user vào database
+      // Save/update user information to database
       if (msg.from) {
         await this.authService.createOrUpdateUser({
           telegramId: msg.from.id,
@@ -114,11 +114,11 @@ export class BotService {
         });
       }
 
-      // Xử lý commands
+      // Handle commands
       if (msg.text?.startsWith('/')) {
         await this.handleCommand(msg);
       } else {
-        // Xử lý message thường
+        // Handle regular message
         await this.handleRegularMessage(msg);
       }
     } catch (error) {
@@ -219,7 +219,7 @@ export class BotService {
   }
 
   /**
-   * Xử lý command /start
+   * Handle /start command
    */
   private async handleStartCommand(
     chatId: number,
@@ -229,7 +229,7 @@ export class BotService {
   }
 
   /**
-   * Xử lý command /help - hiển thị help dựa trên role
+   * Handle /help command - show help based on role
    */
   private async handleHelpCommand(
     chatId: number,
@@ -266,7 +266,7 @@ export class BotService {
   }
 
   /**
-   * Xử lý command /profile
+   * Handle /profile command
    */
   private async handleProfileCommand(
     chatId: number,
@@ -298,7 +298,7 @@ export class BotService {
   }
 
   /**
-   * Xử lý command /admin
+   * Handle /admin command
    */
   private async handleAdminCommand(
     chatId: number,
@@ -321,7 +321,7 @@ export class BotService {
   }
 
   /**
-   * Xử lý command /stats
+   * Handle /stats command
    */
   private async handleStatsCommand(
     chatId: number,
@@ -355,7 +355,7 @@ export class BotService {
   }
 
   /**
-   * Xử lý command /view_buycard
+   * Handle /view_buycard command
    */
   private async handleViewBuyCardCommand(
     chatId: number,
@@ -364,7 +364,7 @@ export class BotService {
     try {
       await this.sendMessage(chatId, getMessage(BotMessages.BUY_CARD_LOADING));
 
-      // Lấy thông tin user để xác định role
+      // Get user information to determine role
       const user = await this.authService.findByTelegramId(userId);
       const userRole = user?.role;
 
@@ -390,8 +390,8 @@ export class BotService {
     }
   }
   /**
-   * Xử lý command /monitor_buy_card - Đặt lịch nhắc kiểm tra balance
-   * Hiển thị inline keyboard để chọn ngưỡng
+   * Handle /monitor_buy_card command - Set balance check reminder
+   * Show inline keyboard to select threshold
    */
   private async handleMonitorBuyCardCommand(
     chatId: number,
@@ -426,7 +426,7 @@ Bot will send notification when Buy Card Fund balance drops below selected thres
   }
 
   /**
-   * Xử lý command /masterfund_vinachain
+   * Handle /masterfund_vinachain command
    */
   private async handleMasterFundVinachainCommand(
     chatId: number,
@@ -443,7 +443,7 @@ Bot will send notification when Buy Card Fund balance drops below selected thres
         return;
       }
 
-      // Gửi loading message
+      // Send loading message
       const loadingMsg = await this.sendMessage(
         chatId,
         'Loading Master Fund information...',
@@ -457,7 +457,7 @@ Bot will send notification when Buy Card Fund balance drops below selected thres
         );
 
       if (result.success) {
-        // Edit loading message với kết quả và keyboard
+        // Edit loading message with result and keyboard
         await this.bot.editMessageText(result.message, {
           chat_id: chatId,
           message_id: loadingMsg.message_id,
@@ -474,7 +474,7 @@ Bot will send notification when Buy Card Fund balance drops below selected thres
   }
 
   /**
-   * Xử lý command /monitor_master_fund - Hiển thị inline keyboard để chọn ngưỡng
+   * Handle /monitor_master_fund command - Show inline keyboard to select threshold
    */
   private async handleMonitorMasterFundCommand(
     chatId: number,
@@ -509,20 +509,20 @@ Bot will send notification when Master Fund balance drops below selected thresho
   }
 
   private getMasterFundMonitorHelpMessage(): string {
-    return `**Đặt nhắc nhở kiểm tra số dư Master Fund**
+    return `**Set Master Fund balance check reminder**
 
-**Cú pháp:** \`/monitor_master_fund\`
+**Syntax:** \`/monitor_master_fund\`
 
-Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nhập số tùy chỉnh.
+Use this command to select warning threshold from menu or enter custom number.
 
-**Hoạt động:**
-• Bot kiểm tra số dư theo tần suất đã chọn (10, 15, hoặc 30 phút)
-• Gửi thông báo khi số dư < ngưỡng đã đặt
-• Sử dụng Redis cache để tối ưu hiệu suất`;
+**Operation:**
+• Bot checks balance at selected frequency (10, 15, or 30 minutes)
+• Send notification when balance < set threshold
+• Use Redis cache to optimize performance`;
   }
 
   /**
-   * Xử lý command /off_monitor_buy_card - Tắt nhắc nhở kiểm tra balance
+   * Handle /off_monitor_buy_card command - Turn off balance check reminder
    */
   private async handleOffMonitorBuyCardCommand(
     chatId: number,
@@ -538,7 +538,7 @@ Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nh�
         return;
       }
 
-      // Gọi service để tắt reminder
+      // Call service to turn off reminder
       const result = await this.buyCardControllerService.setReminder(
         userId,
         0,
@@ -557,7 +557,7 @@ Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nh�
   }
 
   /**
-   * Xử lý command /off_monitor_master_fund - Tắt nhắc nhở kiểm tra Master Fund
+   * Handle /off_monitor_master_fund command - Turn off Master Fund check reminder
    */
   private async handleOffMonitorMasterFundCommand(
     chatId: number,
@@ -573,7 +573,7 @@ Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nh�
         return;
       }
 
-      // Gọi service để tắt reminder Master Fund
+      // Call service to turn off reminder Master Fund
       const success =
         await this.masterFundMonitoringService.addMasterFundReminder(
           userId,
@@ -641,7 +641,7 @@ Bot will send notification when Buy Card Fund balance drops below this threshold
   }
 
   /**
-   * Xử lý message thường (không phải command)
+   * Handle regular message (not a command)
    */
   private async handleRegularMessage(msg: TelegramMessage): Promise<void> {
     const userId = msg.from?.id;
@@ -649,7 +649,7 @@ Bot will send notification when Buy Card Fund balance drops below this threshold
 
     if (!userId) return;
 
-    // Kiểm tra xem user có đang chờ nhập threshold tùy chỉnh không
+    // Check if user is waiting to enter custom threshold
     const isWaitingThreshold = await this.cacheManager.get<boolean>(
       `waiting_threshold:${userId}`,
     );
@@ -680,7 +680,7 @@ Bot will send notification when Buy Card Fund balance drops below this threshold
       return;
     }
 
-    // Xử lý message thường
+    // Handle regular message
     const response = getRegularMessageResponse(text);
     await this.sendMessage(msg.chat.id, response);
   }
@@ -842,7 +842,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý callback query từ inline keyboard
+   * Handle callback query from inline keyboard
    */
   private async handleCallbackQuery(
     callbackQuery: TelegramBot.CallbackQuery,
@@ -854,7 +854,7 @@ Choose check frequency:`;
 
       if (!chatId) return;
 
-      // Xử lý các callback data khác nhau
+      // Handle different callback data
       switch (data) {
         case 'help':
           await this.handleHelpCommand(chatId, userId);
@@ -879,7 +879,7 @@ Choose check frequency:`;
             text: 'Setup cancelled',
             show_alert: false,
           });
-          // Gửi lại lệnh help
+          // Send help command again
           await this.handleHelpCommand(chatId, userId);
           break;
         case 'master_threshold_500':
@@ -899,7 +899,7 @@ Choose check frequency:`;
             text: 'Setup cancelled',
             show_alert: false,
           });
-          // Gửi lại lệnh help
+          // Send help command again
           await this.handleHelpCommand(chatId, userId);
           break;
         case 'master_interval_10':
@@ -912,7 +912,7 @@ Choose check frequency:`;
           await this.handleMasterIntervalSelection(chatId, userId, 30);
           break;
         default:
-          // Xử lý callback cho partner selection
+          // Handle callback for partner selection
           if (data?.startsWith('view_partner_')) {
             const partnerName = data.replace('view_partner_', '');
             await this.handleViewPartnerCallback(
@@ -929,7 +929,7 @@ Choose check frequency:`;
           }
       }
 
-      // Xác nhận đã xử lý callback
+      // Confirm callback processed
       await this.bot.answerCallbackQuery(callbackQuery.id);
     } catch (error) {
       this.logger.error('Error handling callback query:', error);
@@ -942,7 +942,7 @@ Choose check frequency:`;
     options?: TelegramBot.SendMessageOptions,
   ): Promise<TelegramBot.Message> {
     try {
-      // Mặc định không dùng Markdown để tránh lỗi parse
+      // Default to not using Markdown to avoid parse errors
       return await this.bot.sendMessage(chatId, text, {
         parse_mode: undefined,
         ...options,
@@ -969,7 +969,7 @@ Choose check frequency:`;
         error,
       );
 
-      // Log audit cho lỗi gửi message
+      // Log audit for message sending error
       await this.discordWebhookService.auditWebhook(
         'Bot Error: Send Message with Keyboard',
         `Failed to send message with keyboard to user ${chatId}`,
@@ -983,7 +983,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Lấy thông tin bot
+   * Get bot information
    */
   async getBotInfo(): Promise<TelegramBot.User> {
     try {
@@ -1160,7 +1160,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý lệnh /partners
+   * Handle /partners command
    */
   private async handlePartnersCommand(
     chatId: number,
@@ -1202,7 +1202,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý lệnh /add_partner - Bắt đầu flow tạo partner từng bước
+   * Handle /add_partner command - Start step-by-step partner creation flow
    */
   private async handleAddPartnerCommand(
     chatId: number,
@@ -1223,7 +1223,7 @@ Choose check frequency:`;
         return;
       }
 
-      // Bắt đầu flow tạo partner từng bước
+      // Start step-by-step partner creation flow
       await this.cacheManager.set(
         `adding_partner:${userId}`,
         { step: 'name' },
@@ -1248,7 +1248,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý lệnh /edit_partner
+   * Handle /edit_partner command
    */
   private async handleEditPartnerCommand(
     chatId: number,
@@ -1284,7 +1284,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý lệnh /delete_partner
+   * Handle /delete_partner command
    */
   private async handleDeletePartnerCommand(
     chatId: number,
@@ -1320,7 +1320,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý lệnh /clear_cache
+   * Handle /clear_cache command
    */
   private async handleClearCacheCommand(
     chatId: number,
@@ -1344,14 +1344,14 @@ Choose check frequency:`;
       const args = messageText?.split(' ').slice(1) || [];
 
       if (args.length === 0) {
-        // Clear tất cả cache
+        // Clear all cache
         await this.buyCardControllerService.clearAllBalanceCache();
         await this.sendMessage(
           chatId,
           '✅ **All balance cache cleared successfully!**\n\nCache will be refreshed on next request.',
         );
       } else if (args.length === 1) {
-        // Clear cache cho một partner cụ thể
+        // Clear cache for a specific partner
         const partnerName = args[0];
         const partner =
           await this.partnerControllerService.getPartnerByName(partnerName);
@@ -1392,7 +1392,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý lệnh /api_status
+   * Handle /api_status command
    */
   private async handleApiStatusCommand(
     chatId: number,
@@ -1434,7 +1434,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý callback khi user chọn partner để xem balance
+   * Handle callback when user selects partner to view balance
    */
   private async handleViewPartnerCallback(
     chatId: number,
@@ -1443,11 +1443,11 @@ Choose check frequency:`;
     callbackQueryId: string,
   ): Promise<void> {
     try {
-      // Lấy thông tin user role
+      // Get user role information
       const user = await this.authService.findByTelegramId(userId);
       const userRole = user?.role;
 
-      // Gọi controller để xử lý
+      // Call controller to process
       const result =
         await this.buyCardControllerService.handleViewBuyCardForPartner(
           partnerName,
@@ -1484,7 +1484,7 @@ Choose check frequency:`;
   }
 
   /**
-   * Xử lý từng bước tạo partner
+   * Handle step-by-step partner creation
    */
   private async handlePartnerCreationStep(
     chatId: number,
@@ -1497,7 +1497,7 @@ Choose check frequency:`;
 
       switch (step) {
         case 'name':
-          // Validate tên ID
+          // Validate ID name
           if (!/^[a-zA-Z0-9_]+$/.test(input)) {
             await this.sendMessage(
               chatId,
@@ -1509,7 +1509,7 @@ Choose check frequency:`;
             return;
           }
 
-          // Kiểm tra tên đã tồn tại chưa
+          // Check if name already exists
           const existingPartner =
             await this.partnerControllerService.getPartnerByName(input);
           if (existingPartner) {
@@ -1521,7 +1521,7 @@ Choose check frequency:`;
             return;
           }
 
-          // Chuyển sang bước 2
+          // Move to step 2
           await this.cacheManager.set(
             `adding_partner:${userId}`,
             { step: 'displayName', name: input },
@@ -1540,7 +1540,7 @@ Choose check frequency:`;
           break;
 
         case 'displayName':
-          // Validate tên hiển thị
+          // Validate display name
           if (input.trim().length < 2) {
             await this.sendMessage(
               chatId,
@@ -1551,7 +1551,7 @@ Choose check frequency:`;
             return;
           }
 
-          // Chuyển sang bước 3
+          // Move to step 3
           await this.cacheManager.set(
             `adding_partner:${userId}`,
             { step: 'walletAddress', name, displayName: input.trim() },
@@ -1571,7 +1571,7 @@ Choose check frequency:`;
           break;
 
         case 'walletAddress':
-          // Validate địa chỉ ví
+          // Validate wallet address
           if (!/^0x[a-fA-F0-9]{40}$/.test(input)) {
             await this.sendMessage(
               chatId,
@@ -1583,14 +1583,14 @@ Choose check frequency:`;
             return;
           }
 
-          // Tạo partner
+          // Create partner
           const result = await this.partnerControllerService.createPartner({
             name,
             displayName,
             walletAddress: input,
           });
 
-          // Xóa cache
+          // Clear cache
           await this.cacheManager.del(`adding_partner:${userId}`);
 
           if (result.success) {

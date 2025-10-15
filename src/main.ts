@@ -55,7 +55,7 @@ async function bootstrap() {
   // For uncaught exceptions.
   app.useGlobalInterceptors(
     new HttpLoggingInterceptor(),
-    // new HttpResponseInterceptor(auditService), // Comment tạm thời vì chưa có audit service
+    // new HttpResponseInterceptor(auditService), // Temporary comment because audit service not available
   );
 
   // Swagger config.

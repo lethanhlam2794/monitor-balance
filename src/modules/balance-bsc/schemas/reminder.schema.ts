@@ -5,7 +5,7 @@ export type ReminderDocument = Reminder & Document;
 
 @Schema({ timestamps: true })
 export class Reminder {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   telegramId: number;
 
   @Prop({ required: true })
@@ -28,6 +28,9 @@ export class Reminder {
 
   @Prop({ default: null })
   lastBalance: string; // Balance cuối cùng đã kiểm tra
+
+  @Prop({ default: null, index: true })
+  partnerName?: string; // Partner name to monitor (null = default Buy Card)
 }
 
 export const ReminderSchema = SchemaFactory.createForClass(Reminder);

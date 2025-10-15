@@ -108,9 +108,9 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   [BotMessages.PROFILE_HEADER]: ` Thông tin Profile\n\n`,
   [BotMessages.PROFILE_TELEGRAM_ID]: ` Telegram ID: `,
   [BotMessages.PROFILE_NAME]: ` Tên: `,
-  [BotMessages.PROFILE_USERNAME]: ` Username: `,
+  [BotMessages.PROFILE_USERNAME]: ` Tên người dùng: `,
   [BotMessages.PROFILE_LANGUAGE]: ` Ngôn ngữ: `,
-  [BotMessages.PROFILE_ROLE]: ` Role: `,
+  [BotMessages.PROFILE_ROLE]: ` Quyền hạn: `,
   [BotMessages.PROFILE_JOINED]: ` Tham gia: `,
   [BotMessages.PROFILE_LAST_ACTIVE]: ` Hoạt động cuối: `,
   [BotMessages.PROFILE_STATUS]: ` Trạng thái: `,
@@ -125,7 +125,7 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   [BotMessages.ADMIN_PANEL]: ` **Admin Panel**
 
  **Quản lý Users:**
-• /users - Danh sách users
+• /users - Danh sách người dùng
 • /promote <user_id> <role> - Nâng cấp role
 • /demote <user_id> - Hạ cấp role
 
@@ -139,7 +139,7 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   // STATS MESSAGES
   // ===========================================
   [BotMessages.STATS_HEADER]: ` **Thống kê hệ thống**\n\n`,
-  [BotMessages.STATS_TOTAL_USERS]: ` **Tổng users:** `,
+  [BotMessages.STATS_TOTAL_USERS]: ` **Tổng người dùng:** `,
   [BotMessages.STATS_ACTIVE_TODAY]: ` **Hoạt động hôm nay:** `,
   [BotMessages.STATS_ROLE_DISTRIBUTION]: ` **Phân bố theo role:**`,
   [BotMessages.STATS_DEV_COUNT]: `•  Developer: `,
@@ -153,9 +153,9 @@ Sử dụng /help để xem thêm thông tin chi tiết!`,
   [BotMessages.BUY_CARD_LOADING]: `Đang kiểm tra số dư\\.\\.\\.`,
   [BotMessages.BUY_CARD_HEADER]: `Thông tin Quỹ Mua Thẻ\n\n`,
   [BotMessages.BUY_CARD_WALLET]: `Địa chỉ ví: `,
-  [BotMessages.BUY_CARD_TOKEN]: `Token: `,
+  [BotMessages.BUY_CARD_TOKEN]: `Đồng tiền: `,
   [BotMessages.BUY_CARD_BALANCE]: `Số dư: `,
-  [BotMessages.BUY_CARD_NETWORK]: `Mạng: BSC (Chain ID: `,
+  [BotMessages.BUY_CARD_NETWORK]: `Mạng: BNB Smart Chain BEP-20 (chuỗi ID: `,
   [BotMessages.BUY_CARD_LAST_UPDATE]: `Cập nhật lần cuối: `,
 
   // ===========================================

@@ -10,6 +10,7 @@ export interface BalanceMonitoringJobData {
   walletAddress: string;
   contractAddress: string;
   chainId: number;
+  partnerName?: string;
 }
 
 @Processor('balance-monitoring')
@@ -23,8 +24,15 @@ export class BalanceMonitoringProcessor {
 
   @Process('check-balance')
   async handleBalanceCheck(job: Job<BalanceMonitoringJobData>) {
-    const { telegramId, threshold, walletAddress, contractAddress, chainId } = job.data;
-    
+    const {
+      telegramId,
+      threshold,
+      walletAddress,
+      contractAddress,
+      chainId,
+      partnerName,
+    } = job.data;
+
     this.logger.log(`Processing balance check for user ${telegramId}`);
 
     try {
@@ -32,37 +40,56 @@ export class BalanceMonitoringProcessor {
       const balanceInfo = await this.etherscanService.getTokenBalance(
         walletAddress,
         contractAddress,
-        chainId
+        chainId,
       );
 
       if (balanceInfo) {
         const balance = parseFloat(balanceInfo.balanceFormatted);
-        
+
         if (balance < threshold) {
           // Gửi alert
           const alertMessage = this.buildBalanceAlertMessage(
             walletAddress,
             balanceInfo.symbol,
             balanceInfo.balanceFormatted,
-            threshold
+            threshold,
+            partnerName,
           );
-          
+
           await this.botService.sendMessage(telegramId, alertMessage);
-          this.logger.warn(`Alert sent to user ${telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${threshold})`);
+          this.logger.warn(
+            `Alert sent to user ${telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${threshold})`,
+          );
         } else {
-          this.logger.log(`Balance for user ${telegramId} is ${balanceInfo.balanceFormatted}, which is above threshold ${threshold}. No alert sent.`);
+          this.logger.log(
+            `Balance for user ${telegramId} is ${balanceInfo.balanceFormatted}, which is above threshold ${threshold}. No alert sent.`,
+          );
         }
       } else {
-        this.logger.warn(`Failed to fetch balance for user ${telegramId} - API may be temporarily unavailable`);
+        this.logger.warn(
+          `Failed to fetch balance for user ${telegramId} - API may be temporarily unavailable`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Error processing balance check for user ${telegramId}:`, error);
+      this.logger.error(
+        `Error processing balance check for user ${telegramId}:`,
+        error,
+      );
       throw error; // Re-throw để Bull có thể retry
     }
   }
 
-  private buildBalanceAlertMessage(walletAddress: string, symbol: string, balance: string, threshold: number): string {
-    return `**🚨 Cảnh báo Buy Card!**
+  private buildBalanceAlertMessage(
+    walletAddress: string,
+    symbol: string,
+    balance: string,
+    threshold: number,
+    partnerName?: string,
+  ): string {
+    const title = partnerName
+      ? `🚨 Cảnh báo ${partnerName}!`
+      : '🚨 Cảnh báo Buy Card!';
+    return `**${title}**
 
 **Địa chỉ ví:** \`${walletAddress}\`
 **Số dư hiện tại:** ${balance} ${symbol}

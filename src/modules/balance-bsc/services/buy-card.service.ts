@@ -99,6 +99,7 @@ export class BuyCardService {
     telegramId: number,
     threshold: number,
     intervalMinutes: number = 30,
+    partnerName?: string,
   ): Promise<{ success: boolean; message: string }> {
     try {
       // Validate input
@@ -142,6 +143,7 @@ export class BuyCardService {
         telegramId,
         threshold,
         intervalMinutes,
+        partnerName,
       );
 
       return {
@@ -150,9 +152,10 @@ export class BuyCardService {
 
 **Ngưỡng cảnh báo:** ${threshold} USDT
 **Tần suất kiểm tra:** ${intervalMinutes} phút
+**Đối tác:** ${partnerName || 'Buy Card Fund'}
 **Trạng thái:** Hoạt động
 
-Bot sẽ tự động kiểm tra số dư mỗi 30 phút và gửi cảnh báo 5 phút sau khi kiểm tra nếu số dư < ${threshold} USDT.`,
+Bot sẽ tự động kiểm tra số dư và gửi cảnh báo nếu số dư < ${threshold} USDT.`,
       };
     } catch (error) {
       this.logger.error('Error in setReminder:', error);

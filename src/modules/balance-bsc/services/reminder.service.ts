@@ -20,13 +20,15 @@ export class ReminderService {
     telegramId: number,
     threshold: number,
     intervalMinutes: number = 15,
+    partnerName?: string,
   ): Promise<ReminderDocument> {
     try {
       const reminder = await this.reminderModel.findOneAndUpdate(
-        { telegramId },
+        { telegramId, partnerName: partnerName || null },
         {
           threshold,
           intervalMinutes,
+          partnerName,
           isActive: true,
           lastCheckedAt: new Date(),
         },
@@ -94,7 +96,7 @@ export class ReminderService {
    */
   async deactivateReminder(telegramId: number): Promise<boolean> {
     try {
-      const result = await this.reminderModel.updateOne(
+      const result = await this.reminderModel.updateMany(
         { telegramId },
         { isActive: false },
       );
@@ -190,12 +192,7 @@ export class ReminderService {
         return false;
       }
 
-      // Kiểm tra ngưỡng
-      if (currentBalance < reminder.threshold) {
-        return true;
-      }
-
-      return false;
+      return currentBalance < reminder.threshold;
     } catch (error) {
       this.logger.error('Error checking alert condition:', error);
       await this.discordWebhook.auditWebhook(

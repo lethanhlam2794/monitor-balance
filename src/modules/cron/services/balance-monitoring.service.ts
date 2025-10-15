@@ -9,6 +9,7 @@ import { getMessage, BotMessages } from '@shared/enums/bot-messages.enum';
 import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { PartnerService } from '../../balance-bsc/services/partner.service';
 
 @Injectable()
 export class BalanceMonitoringService {
@@ -26,6 +27,7 @@ export class BalanceMonitoringService {
     private configService: ConfigService,
     private discordWebhookService: DiscordWebhookService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private partnerService: PartnerService,
   ) {
     this.ADDRESS_BUY_CARD =
       this.configService.get<string>('ADDRESS_BUY_CARD') || '';
@@ -46,38 +48,80 @@ export class BalanceMonitoringService {
       return;
     }
 
-    this.logger.debug('Fetching balance from Etherscan API...');
+    this.logger.debug('Fetching balance for all active partners...');
 
-    // Gọi API Etherscan để lấy balance (sẽ được cache)
-    const balanceInfo = await this.etherscanService.getTokenBalance(
-      this.ADDRESS_BUY_CARD,
-      this.CONTRACT_ADDRESS_USDT,
-      56, // BSC Chain ID
-    );
+    try {
+      // Lấy tất cả partner active
+      const partners = await this.partnerService.getActivePartners();
 
-    if (balanceInfo) {
-      this.logger.log(
-        `Balance fetched: ${balanceInfo.balanceFormatted} ${balanceInfo.symbol}`,
-      );
+      // Thêm default Buy Card nếu có
+      const allPartners = [...partners];
+      if (this.ADDRESS_BUY_CARD && this.CONTRACT_ADDRESS_USDT) {
+        allPartners.push({
+          name: 'default',
+          displayName: 'Buy Card Fund',
+          walletAddress: this.ADDRESS_BUY_CARD,
+          contractAddress: this.CONTRACT_ADDRESS_USDT,
+          chainId: 56,
+          tokenSymbol: 'USDT',
+          tokenDecimals: 18,
+        } as any);
+      }
 
-      // Lưu balance vào Redis với TTL 35 phút (lâu hơn cron 30 phút)
-      await this.cacheManager.set(
-        'buy_card_balance',
-        balanceInfo,
-        35 * 60 * 1000,
-      );
+      // Quét balance cho từng partner
+      for (const partner of allPartners) {
+        try {
+          const balanceInfo = await this.etherscanService.getTokenBalance(
+            partner.walletAddress,
+            partner.contractAddress,
+            partner.chainId,
+          );
+
+          if (balanceInfo) {
+            this.logger.log(
+              `Balance fetched for ${partner.displayName}: ${balanceInfo.balanceFormatted} ${balanceInfo.symbol}`,
+            );
+
+            // Lưu balance vào Redis với key riêng cho từng partner
+            const cacheKey =
+              partner.name === 'default'
+                ? 'buy_card_balance'
+                : `partner_balance_${partner.name}`;
+
+            await this.cacheManager.set(
+              cacheKey,
+              {
+                ...balanceInfo,
+                partnerName: partner.name,
+                partnerDisplayName: partner.displayName,
+              },
+              35 * 60 * 1000, // TTL 35 phút
+            );
+
+            // Lên lịch gửi thông báo sau 5 phút cho partner này
+            setTimeout(
+              async () => {
+                await this.sendNotificationsToUsers(balanceInfo, partner.name);
+              },
+              5 * 60 * 1000, // 5 phút
+            );
+          } else {
+            this.logger.warn(
+              `Failed to fetch balance for ${partner.displayName}`,
+            );
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error fetching balance for ${partner.displayName}:`,
+            error,
+          );
+        }
+      }
 
       // Reset error count khi thành công
       this.apiErrorCount = 0;
-
-      // Lên lịch gửi thông báo sau 5 phút
-      setTimeout(
-        async () => {
-          await this.sendNotificationsToUsers(balanceInfo);
-        },
-        5 * 60 * 1000,
-      ); // 5 phút
-    } else {
+    } catch (error) {
+      this.logger.error('Error in cron job:', error);
       // Tăng error count khi thất bại
       this.apiErrorCount++;
       this.lastApiErrorTime = new Date();
@@ -90,22 +134,34 @@ export class BalanceMonitoringService {
   }
 
   /**
-   * Gửi thông báo cho tất cả users có reminder active
+   * Gửi thông báo cho tất cả users có reminder active cho partner cụ thể
    */
-  private async sendNotificationsToUsers(balanceInfo: any): Promise<void> {
+  private async sendNotificationsToUsers(
+    balanceInfo: any,
+    partnerName?: string,
+  ): Promise<void> {
     try {
       this.logger.debug('Sending notifications to users...');
       const activeReminders = await this.reminderService.getActiveReminders();
 
       for (const reminder of activeReminders) {
+        // Chỉ gửi thông báo cho reminder của partner này (hoặc default nếu không có partnerName)
+        const reminderPartner = reminder.partnerName || null;
+        const currentPartner = partnerName || null;
+
+        if (reminderPartner !== currentPartner) {
+          continue; // Bỏ qua reminder không thuộc partner này
+        }
+
         const balance = parseFloat(balanceInfo.balanceFormatted);
 
         if (balance < reminder.threshold) {
           const alertMessage = this.buildBalanceAlertMessage(
-            this.ADDRESS_BUY_CARD,
+            balanceInfo.address,
             balanceInfo.symbol,
             balanceInfo.balanceFormatted,
             reminder.threshold,
+            partnerName,
           );
 
           await this.botService.sendMessage(reminder.telegramId, alertMessage);
@@ -115,11 +171,11 @@ export class BalanceMonitoringService {
           );
 
           this.logger.warn(
-            `Alert sent to user ${reminder.telegramId}: Balance (${balanceInfo.balanceFormatted}) below threshold (${reminder.threshold})`,
+            `Alert sent to user ${reminder.telegramId} for ${partnerName || 'default'}: Balance (${balanceInfo.balanceFormatted}) below threshold (${reminder.threshold})`,
           );
         } else {
           this.logger.log(
-            `Balance for user ${reminder.telegramId} is ${balanceInfo.balanceFormatted}, which is above threshold ${reminder.threshold}. No alert sent.`,
+            `Balance for user ${reminder.telegramId} (${partnerName || 'default'}) is ${balanceInfo.balanceFormatted}, which is above threshold ${reminder.threshold}. No alert sent.`,
           );
         }
       }
@@ -181,14 +237,18 @@ export class BalanceMonitoringService {
     symbol: string,
     balance: string,
     threshold: number,
+    partnerName?: string,
   ): string {
-    return `**Buy Card Alert!**
+    const title = partnerName
+      ? `**🚨 Cảnh báo ${partnerName}!**`
+      : '**🚨 Cảnh báo Buy Card!**';
+    return `${title}
 
-**Wallet Address:** \`${walletAddress}\`
-**Current Balance:** ${balance} ${symbol}
-**Alert Threshold:** ${threshold} ${symbol}
+**Địa chỉ ví:** \`${walletAddress}\`
+**Số dư hiện tại:** ${balance} ${symbol}
+**Ngưỡng cảnh báo:** ${threshold} ${symbol}
 
-Balance is below the set threshold.`;
+Số dư đã xuống dưới ngưỡng đã đặt.`;
   }
 
   /**

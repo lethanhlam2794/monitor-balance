@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { ReminderService } from '../../balance-bsc/services/reminder.service';
 import { ConfigService } from '@nestjs/config';
+import { PartnerService } from '../../balance-bsc/services/partner.service';
 import { BalanceMonitoringJobData } from '../queues/balance-monitoring.queue';
 import { DiscordWebhookService } from '@shared/services/discord-webhook.service';
 
@@ -16,6 +17,7 @@ export class BalanceMonitoringQueueService {
     private reminderService: ReminderService,
     private configService: ConfigService,
     private discordWebhook: DiscordWebhookService,
+    private partnerService: PartnerService,
   ) {}
 
   /**
@@ -25,6 +27,7 @@ export class BalanceMonitoringQueueService {
     telegramId: number,
     threshold: number,
     intervalMinutes: number,
+    partnerName?: string,
   ): Promise<void> {
     try {
       // Lưu reminder vào database
@@ -32,19 +35,39 @@ export class BalanceMonitoringQueueService {
         telegramId,
         threshold,
         intervalMinutes,
+        partnerName,
       );
 
       // Xóa job cũ nếu có
       await this.removeUserJobs(telegramId);
 
       // Tạo job mới với delay
+      // Lấy thông tin ví/contract theo partner nếu có
+      let walletAddress =
+        this.configService.get<string>('ADDRESS_BUY_CARD') || '';
+      let contractAddress =
+        this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '';
+      let chainId = 56;
+
+      if (partnerName) {
+        try {
+          const partner =
+            await this.partnerService.getPartnerByName(partnerName);
+          if (partner) {
+            walletAddress = partner.walletAddress || walletAddress;
+            contractAddress = partner.contractAddress || contractAddress;
+            chainId = partner.chainId || chainId;
+          }
+        } catch {}
+      }
+
       const jobData: BalanceMonitoringJobData = {
         telegramId,
         threshold,
-        walletAddress: this.configService.get<string>('ADDRESS_BUY_CARD') || '',
-        contractAddress:
-          this.configService.get<string>('CONTRACT_ADDRESS_USDT') || '',
-        chainId: 56, // BSC
+        walletAddress,
+        contractAddress,
+        chainId,
+        partnerName,
       };
 
       // Tạo job với repeat pattern
@@ -55,7 +78,7 @@ export class BalanceMonitoringQueueService {
           repeat: {
             every: intervalMinutes * 60 * 1000, // Convert to milliseconds
           },
-          jobId: `balance-${telegramId}`, // Unique job ID
+          jobId: `balance-${telegramId}-${partnerName || 'default'}`,
           removeOnComplete: 10, // Keep last 10 completed jobs
           removeOnFail: 5, // Keep last 5 failed jobs
         },
@@ -150,6 +173,7 @@ export class BalanceMonitoringQueueService {
           reminder.telegramId,
           reminder.threshold,
           reminder.intervalMinutes,
+          reminder.partnerName || undefined,
         );
       }
 

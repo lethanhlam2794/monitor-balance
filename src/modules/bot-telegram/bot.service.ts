@@ -71,7 +71,16 @@ export class BotService {
       return;
     }
 
-    this.bot = new TelegramBot(token, { polling: true });
+    // Thêm retry logic và timeout settings
+    this.bot = new TelegramBot(token, {
+      polling: {
+        interval: 1000,
+        autoStart: true,
+        params: {
+          timeout: 10,
+        },
+      },
+    });
     this.setupEventHandlers();
     this.logger.log('Telegram Bot initialized successfully');
   }
@@ -80,14 +89,36 @@ export class BotService {
    * Thiết lập các event handlers cho bot
    */
   private setupEventHandlers(): void {
-    // Xử lý lỗi
+    // Xử lý lỗi với retry logic
     this.bot.on('error', (error) => {
       this.logger.error('Telegram Bot Error:', error);
+      // Không restart bot ngay lập tức để tránh loop
     });
 
-    // Xử lý polling error
+    // Xử lý polling error với retry
     this.bot.on('polling_error', (error) => {
       this.logger.error('Telegram Bot Polling Error:', error);
+
+      // Chỉ restart nếu là lỗi nghiêm trọng
+      if (
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('EFATAL')
+      ) {
+        this.logger.warn(
+          'Attempting to restart bot due to connection error...',
+        );
+        setTimeout(() => {
+          try {
+            this.bot.stopPolling();
+            setTimeout(() => {
+              this.bot.startPolling();
+              this.logger.log('Bot polling restarted successfully');
+            }, 5000); // Wait 5 seconds before restart
+          } catch (restartError) {
+            this.logger.error('Failed to restart bot:', restartError);
+          }
+        }, 10000); // Wait 10 seconds before attempting restart
+      }
     });
 
     // Xử lý message mới
@@ -408,17 +439,14 @@ export class BotService {
         return;
       }
 
-      const message = `🔔 *Đặt thông báo vượt ngưỡng khi*
+      const message = `🔔 *Đặt thông báo vượt ngưỡng*
 
-Chọn ngưỡng cảnh báo cho Buy Card Fund:
+Chọn partner và ngưỡng cảnh báo:
 
-Bot sẽ gửi thông báo khi số dư Buy Card Fund xuống dưới ngưỡng đã chọn\\.`;
+Bot sẽ gửi thông báo khi số dư của đối tác xuống dưới ngưỡng đã chọn\\.`;
 
-      await this.sendMessageWithKeyboard(
-        chatId,
-        message,
-        this.createBuyCardThresholdKeyboard(),
-      );
+      const keyboard = await this.createPartnerSelectionKeyboard();
+      await this.sendMessageWithKeyboard(chatId, message, keyboard);
     } catch (error) {
       this.logger.error('Error in handleMonitorBuyCardCommand:', error);
       await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
@@ -604,10 +632,14 @@ Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nh�
     threshold: number,
   ): Promise<void> {
     try {
+      const selectedPartner = await this.cacheManager.get<string>(
+        `selected_partner:${userId}`,
+      );
       const result = await this.buyCardControllerService.setReminder(
         userId,
         threshold,
         30,
+        selectedPartner || undefined,
       );
       await this.sendMessage(chatId, result.message);
     } catch (error) {
@@ -626,13 +658,29 @@ Sử dụng lệnh này để chọn ngưỡng cảnh báo từ menu hoặc nh�
         true,
         CACHE_TIMEOUT,
       );
+      const selectedPartner = await this.cacheManager.get<string>(
+        `selected_partner:${userId}`,
+      );
+      let partnerLabel = 'Buy Card Fund';
+      if (selectedPartner) {
+        try {
+          const partner =
+            await this.partnerControllerService.getPartnerByName(
+              selectedPartner,
+            );
+          if (partner?.displayName) {
+            partnerLabel = partner.displayName.replace(
+              /[_*\[\]()~`>#+=|{}.!-]/g,
+              '\\$&',
+            );
+          } else {
+            partnerLabel = selectedPartner;
+          }
+        } catch {}
+      }
       await this.sendMessage(
         chatId,
-        `*Nhập ngưỡng tùy chỉnh*
-
-Vui lòng nhập số USDT cho ngưỡng cảnh báo \\(ví dụ: 1500\\)
-
-Bot sẽ gửi thông báo khi số dư Buy Card Fund xuống dưới ngưỡng này\\.`,
+        `*Nhập ngưỡng tùy chỉnh*\n\nVui lòng nhập số USDT cho ngưỡng cảnh báo \\ (ví dụ: 1500\\ )\n\nBot sẽ gửi thông báo khi số dư ${partnerLabel} xuống dưới ngưỡng này\\.`,
       );
     } catch (error) {
       this.logger.error('Error in handleCustomThresholdRequest:', error);
@@ -700,10 +748,15 @@ Bot sẽ gửi thông báo khi số dư Buy Card Fund xuống dưới ngưỡng 
         return;
       }
 
+      const selectedPartner = await this.cacheManager.get<string>(
+        `selected_partner:${userId}`,
+      );
+
       const result = await this.buyCardControllerService.setReminder(
         userId,
         threshold,
         30,
+        selectedPartner || undefined,
       );
       await this.sendMessage(chatId, result.message);
     } catch (error) {
@@ -905,6 +958,22 @@ Chọn tần suất kiểm tra:`;
           // Gửi lại lệnh help
           await this.handleHelpCommand(chatId, userId);
           break;
+        case 'monitor_partner_buycard':
+          await this.handlePartnerSelection(chatId, userId, 'buycard');
+          break;
+        case 'monitor_partner_vinachain':
+          await this.handlePartnerSelection(chatId, userId, 'vinachain');
+          break;
+        case 'monitor_partner_list':
+          await this.handlePartnerListSelection(chatId, userId);
+          break;
+        case 'monitor_cancel':
+          await this.bot.answerCallbackQuery(callbackQuery.id, {
+            text: 'Đã hủy cài đặt thông báo',
+            show_alert: false,
+          });
+          await this.handleHelpCommand(chatId, userId);
+          break;
         case 'master_interval_10':
           await this.handleMasterIntervalSelection(chatId, userId, 10);
           break;
@@ -924,6 +993,9 @@ Chọn tần suất kiểm tra:`;
               partnerName,
               callbackQuery.id,
             );
+          } else if (data?.startsWith('monitor_partner_')) {
+            const partnerName = data.replace('monitor_partner_', '');
+            await this.handlePartnerSelection(chatId, userId, partnerName);
           } else {
             await this.bot.answerCallbackQuery(callbackQuery.id, {
               text: getMessage(BotMessages.CALLBACK_FEATURE_DEVELOPING),
@@ -972,16 +1044,29 @@ Chọn tần suất kiểm tra:`;
         error,
       );
 
-      // Log audit cho lỗi gửi message
-      await this.discordWebhookService.auditWebhook(
-        'Bot Error: Send Message with Keyboard',
-        `Failed to send message with keyboard to user ${chatId}`,
-        {
+      // Try sending without Markdown if MarkdownV2 fails
+      try {
+        await this.bot.sendMessage(
           chatId,
-          error: (error as any)?.message || String(error),
-          timestamp: new Date(),
-        },
-      );
+          text.replace(/[*_`[\]()~>#+=|{}.!-]/g, ''),
+          {
+            reply_markup: keyboard,
+          },
+        );
+      } catch (fallbackError) {
+        this.logger.error(`Fallback send also failed:`, fallbackError);
+
+        // Log audit cho lỗi gửi message
+        await this.discordWebhookService.auditWebhook(
+          'Bot Error: Send Message with Keyboard',
+          `Failed to send message with keyboard to user ${chatId}`,
+          {
+            chatId,
+            error: (error as any)?.message || String(error),
+            timestamp: new Date(),
+          },
+        );
+      }
     }
   }
 
@@ -998,6 +1083,59 @@ Chọn tần suất kiểm tra:`;
   }
 
   // Helper methods for keyboards
+  private async createPartnerSelectionKeyboard() {
+    try {
+      // Get partners from database
+      const partners = await this.partnerControllerService.getAllPartners();
+
+      if (!partners || partners.length === 0) {
+        // Fallback to default buttons if no partners
+        return {
+          inline_keyboard: [
+            [
+              {
+                text: '🏦 Buy Card Fund',
+                callback_data: 'monitor_partner_buycard',
+              },
+            ],
+            [{ text: '❌ Hủy', callback_data: 'monitor_cancel' }],
+          ],
+        };
+      }
+
+      // Create buttons for each partner
+      const buttons = partners.map((partner) => ({
+        text: `🏢 ${partner.displayName}`,
+        callback_data: `monitor_partner_${partner.name}`,
+      }));
+
+      // Split into rows of 2 buttons each
+      const rows: TelegramBot.InlineKeyboardButton[][] = [];
+      for (let i = 0; i < buttons.length; i += 2) {
+        rows.push(buttons.slice(i, i + 2));
+      }
+
+      // Add cancel button
+      rows.push([{ text: '❌ Hủy', callback_data: 'monitor_cancel' }]);
+
+      return { inline_keyboard: rows };
+    } catch (error) {
+      this.logger.error('Error creating partner selection keyboard:', error);
+      // Fallback to default buttons
+      return {
+        inline_keyboard: [
+          [
+            {
+              text: '🏦 Buy Card Fund',
+              callback_data: 'monitor_partner_buycard',
+            },
+          ],
+          [{ text: '❌ Hủy', callback_data: 'monitor_cancel' }],
+        ],
+      };
+    }
+  }
+
   private createBuyCardThresholdKeyboard() {
     return {
       inline_keyboard: [
@@ -1033,6 +1171,108 @@ Chọn tần suất kiểm tra:`;
         ],
       ],
     };
+  }
+
+  /**
+   * Handle partner selection for monitoring
+   */
+  private async handlePartnerSelection(
+    chatId: number,
+    userId: number,
+    partnerName: string,
+  ): Promise<void> {
+    try {
+      // Get partner info to get displayName
+      const partner =
+        await this.partnerControllerService.getPartnerByName(partnerName);
+
+      if (!partner) {
+        await this.sendMessage(
+          chatId,
+          '❌ Không tìm thấy partner. Vui lòng thử lại.',
+        );
+        return;
+      }
+
+      // Use displayName instead of name
+      const displayName = partner.displayName;
+      const escapedDisplayName = displayName.replace(
+        /[_*[\]()~`>#+=|{}.!-]/g,
+        '\\$&',
+      );
+
+      const message = `🔔 *Đặt thông báo cho ${escapedDisplayName}*
+
+Chọn ngưỡng cảnh báo:
+
+Bot sẽ gửi thông báo khi số dư ${escapedDisplayName} xuống dưới ngưỡng đã chọn\\.`;
+
+      await this.sendMessageWithKeyboard(
+        chatId,
+        message,
+        this.createBuyCardThresholdKeyboard(),
+      );
+      await this.cacheManager.set(
+        `selected_partner:${userId}`,
+        partner.name,
+        CACHE_TIMEOUT,
+      );
+    } catch (error) {
+      this.logger.error('Error in handlePartnerSelection:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  /**
+   * Handle partner list selection
+   */
+  private async handlePartnerListSelection(
+    chatId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // Get partners from controller
+      const partners = await this.partnerControllerService.getAllPartners();
+
+      if (!partners || partners.length === 0) {
+        await this.sendMessage(
+          chatId,
+          '❌ Không tìm thấy partner nào. Vui lòng thử lại sau.',
+        );
+        return;
+      }
+
+      const message = `📋 *Chọn Partner để Monitor*
+
+Chọn partner từ danh sách bên dưới:`;
+
+      const keyboard = this.createPartnerListKeyboard(partners);
+      await this.sendMessageWithKeyboard(chatId, message, keyboard);
+    } catch (error) {
+      this.logger.error('Error in handlePartnerListSelection:', error);
+      await this.sendMessage(chatId, getMessage(BotMessages.ERROR_GENERAL));
+    }
+  }
+
+  /**
+   * Create keyboard for partner list
+   */
+  private createPartnerListKeyboard(partners: any[]) {
+    const buttons = partners.map((partner) => ({
+      text: `🏢 ${partner.displayName}`,
+      callback_data: `monitor_partner_${partner.name}`,
+    }));
+
+    // Split into rows of 2 buttons each
+    const rows: TelegramBot.InlineKeyboardButton[][] = [];
+    for (let i = 0; i < buttons.length; i += 2) {
+      rows.push(buttons.slice(i, i + 2));
+    }
+
+    // Add cancel button
+    rows.push([{ text: '❌ Hủy', callback_data: 'monitor_cancel' }]);
+
+    return { inline_keyboard: rows };
   }
 
   private createIntervalKeyboard() {

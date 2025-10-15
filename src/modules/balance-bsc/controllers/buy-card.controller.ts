@@ -43,11 +43,11 @@ export class BuyCardControllerService {
       }
 
       // Nếu có nhiều partners, hiển thị keyboard chọn
-      let message = '📋 **Chọn Partner để xem balance:**\n\n';
+      let message = '📋 **Chọn đối tác để xem số dư:**\n\n';
       partners.forEach((partner, index) => {
         message += `**${index + 1}\\. ${escapeMarkdownV2(partner.displayName)}**\n`;
-        message += `• Token: ${escapeMarkdownV2(partner.tokenSymbol)}\n`;
-        message += `• Chain: ${escapeMarkdownV2(partner.chainId.toString())}\n\n`;
+        message += `• Đồng tiền: ${escapeMarkdownV2(partner.tokenSymbol)}\n`;
+        message += `• Chuỗi ID: ${escapeMarkdownV2(partner.chainId.toString())}\n\n`;
       });
 
       const keyboard = this.createPartnerSelectionKeyboard(partners);
@@ -79,7 +79,7 @@ export class BuyCardControllerService {
       if (!partner) {
         return {
           success: false,
-          message: `❌ Không tìm thấy partner "${partnerName}"!`,
+          message: `❌ Không tìm thấy đối tác "${partnerName}"!`,
         };
       }
 
@@ -92,7 +92,7 @@ export class BuyCardControllerService {
       if (!balanceInfo) {
         return {
           success: false,
-          message: '❌ Không thể lấy thông tin balance!',
+          message: '❌ Không thể lấy thông tin số dư!',
         };
       }
 
@@ -104,7 +104,7 @@ export class BuyCardControllerService {
         partner.displayName,
       );
 
-      // Tạo keyboard cho tất cả user (tạm thời để debug)
+      // Tạo keyboard cho tất cả user
       let keyboard;
       this.logger.log(`User role: ${userRole}`);
       if (userRole === 'USER' || userRole === 'ADVANCED_USER' || !userRole) {
@@ -179,11 +179,13 @@ export class BuyCardControllerService {
     telegramId: number,
     threshold: number,
     intervalMinutes: number = 30,
+    partnerName?: string,
   ): Promise<{ success: boolean; message: string }> {
     return this.buyCardService.setReminder(
       telegramId,
       threshold,
       intervalMinutes,
+      partnerName,
     );
   }
 
@@ -235,14 +237,14 @@ export class BuyCardControllerService {
 
       // Partner đầu tiên trong row
       row.push({
-        text: `📊 ${partners[i].displayName}`,
+        text: ` ${partners[i].displayName}`,
         callback_data: `view_partner_${partners[i].name}`,
       });
 
       // Partner thứ hai trong row (nếu có)
       if (i + 1 < partners.length) {
         row.push({
-          text: `📊 ${partners[i + 1].displayName}`,
+          text: ` ${partners[i + 1].displayName}`,
           callback_data: `view_partner_${partners[i + 1].name}`,
         });
       }

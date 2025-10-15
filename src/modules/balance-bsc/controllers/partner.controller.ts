@@ -366,6 +366,13 @@ export class PartnerControllerService {
   }
 
   /**
+   * Lấy tất cả partners (public method)
+   */
+  async getAllPartners() {
+    return this.partnerService.getAllPartners();
+  }
+
+  /**
    * Tạo partner mới
    */
   async createPartner(partnerData: {
